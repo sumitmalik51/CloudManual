@@ -106,6 +106,15 @@ const Footer: React.FC = () => {
                   Contact
                 </Link>
               </li>
+              <li>
+                <Link 
+                  to="/contact" 
+                  className="group text-gray-400 hover:text-white transition-all duration-300 inline-flex items-center"
+                >
+                  <span className="mr-2 w-1 h-1 bg-gray-500 rounded-full group-hover:bg-blue-400 transition-colors duration-300"></span>
+                  Contact
+                </Link>
+              </li>
             </ul>
           </div>
 

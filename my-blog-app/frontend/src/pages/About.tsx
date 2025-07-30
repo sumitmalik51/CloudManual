@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import SEOHead from '../components/seo/SEOHead';
+import PageTransition from '../components/ui/PageTransition';
 
 const About: React.FC = () => {
   const teamMembers = [
@@ -50,14 +51,15 @@ const About: React.FC = () => {
   ];
 
   return (
-    <Layout>
-      <SEOHead
-        title="About CloudManual - Your Cloud Technology Guide"
-        description="Learn about CloudManual's mission to provide practical, hands-on cloud computing tutorials and guides. Meet our team of cloud experts and discover our story."
-        keywords={['about cloudmanual', 'cloud experts', 'team', 'mission', 'cloud computing guides']}
-        url={`${window.location.origin}/about`}
-        type="website"
-      />
+    <PageTransition>
+      <Layout>
+        <SEOHead
+          title="About CloudManual - Your Cloud Technology Guide"
+          description="Learn about CloudManual's mission to provide practical, hands-on cloud computing tutorials and guides. Meet our team of cloud experts and discover our story."
+          keywords={['about cloudmanual', 'cloud experts', 'team', 'mission', 'cloud computing guides']}
+          url={`${window.location.origin}/about`}
+          type="website"
+        />
 
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-24 px-6 overflow-hidden">
@@ -330,7 +332,8 @@ const About: React.FC = () => {
           </div>
         </div>
       </section>
-    </Layout>
+      </Layout>
+    </PageTransition>
   );
 };
 

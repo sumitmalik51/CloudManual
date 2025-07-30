@@ -4,6 +4,7 @@ import Layout from '../components/layout/Layout';
 import SEOHead from '../components/seo/SEOHead';
 import ErrorMessage from '../components/ui/ErrorMessage';
 import TopicsModal from '../components/ui/TopicsModal';
+import PageTransition from '../components/ui/PageTransition';
 import { blogAPI } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
 
@@ -243,14 +244,15 @@ const Home: React.FC = () => {
   };
 
   return (
-    <Layout>
-      <SEOHead
-        title="CloudManual - Your Guide to Cloud Technologies"
-        description="Comprehensive guides, tutorials, and best practices for cloud computing, Azure, AWS, DevOps, and modern web development."
-        keywords={['cloud computing', 'Azure', 'AWS', 'DevOps', 'tutorials', 'web development', 'programming']}
-        url={window.location.href}
-        type="website"
-      />
+    <PageTransition>
+      <Layout>
+        <SEOHead
+          title="CloudManual - Your Guide to Cloud Technologies"
+          description="Comprehensive guides, tutorials, and best practices for cloud computing, Azure, AWS, DevOps, and modern web development."
+          keywords={['cloud computing', 'Azure', 'AWS', 'DevOps', 'tutorials', 'web development', 'programming']}
+          url={window.location.href}
+          type="website"
+        />
       {/* Hero Section */}
       <section 
         className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-32 px-6 text-center overflow-visible"
@@ -308,20 +310,36 @@ const Home: React.FC = () => {
             Your modern guide to Cloud, AI, and DevOps — hands-on, simplified, and real-world focused.
           </p>
           
-          {/* Premium Search Bar with Autocomplete */}
+          {/* Premium Search Bar with Autocomplete & Animations */}
           <div className="max-w-3xl mx-auto mb-12 relative z-50">
-            <div className="relative group">
-              <div className={`absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur-lg transition-all duration-500 ${
-                searchFocused ? 'opacity-70 scale-105' : 'opacity-30 group-hover:opacity-50'
+            <div className="relative group cursor-text" onClick={() => searchInputRef.current?.focus()}>
+              {/* Animated Background Glow */}
+              <div className={`absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-2xl blur-lg transition-all duration-700 ${
+                searchFocused ? 'opacity-80 scale-110 animate-pulse' : 'opacity-30 group-hover:opacity-60 group-hover:scale-105'
               }`}></div>
-              <div className={`relative bg-white/95 backdrop-blur-xl rounded-2xl border border-white/20 p-2 transition-all duration-300 ${
-                searchFocused ? 'shadow-2xl ring-4 ring-blue-200/50 scale-105' : 'shadow-2xl hover:shadow-3xl'
+              
+              {/* Moving Border Animation */}
+              <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent rounded-2xl transition-all duration-1000 ${
+                  searchFocused || 'group-hover:animate-shimmer'
+                }`} style={{
+                  background: searchFocused ? 
+                    'linear-gradient(45deg, transparent, rgba(255,255,255,0.4), transparent)' :
+                    'linear-gradient(-45deg, transparent, rgba(255,255,255,0.2), transparent)',
+                  animation: searchFocused ? 'shimmer 2s ease-in-out infinite' : undefined
+                }}></div>
+              </div>
+              
+              {/* Main Search Container */}
+              <div className={`relative bg-white/95 backdrop-blur-xl rounded-2xl border border-white/20 p-2 transition-all duration-500 transform ${
+                searchFocused ? 'shadow-2xl ring-4 ring-blue-200/50 scale-110' : 'shadow-2xl hover:shadow-3xl hover:scale-105'
               }`}>
                 <div className="flex items-center">
                   <div className="flex-1 relative">
+                    {/* Search Icon */}
                     <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-                      <svg className={`h-6 w-6 transition-colors duration-300 ${
-                        searchFocused ? 'text-blue-500' : 'text-gray-400'
+                      <svg className={`h-6 w-6 transition-all duration-500 ${
+                        searchFocused ? 'text-blue-500 scale-110' : 'text-gray-400 group-hover:text-blue-400 group-hover:scale-105'
                       }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
@@ -1347,7 +1365,8 @@ const Home: React.FC = () => {
         onClose={() => setShowTopicsModal(false)}
         topics={topicsData}
       />
-    </Layout>
+      </Layout>
+    </PageTransition>
   );
 };
 

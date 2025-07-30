@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Layout from '../components/layout/Layout';
 import SEOHead from '../components/seo/SEOHead';
+import PageTransition from '../components/ui/PageTransition';
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -120,14 +121,15 @@ const Contact: React.FC = () => {
   ];
 
   return (
-    <Layout>
-      <SEOHead
-        title="Contact CloudManual - Cloud Architecture & AI Consulting"
-        description="Get in touch with Sumit Malik for cloud architecture consulting, AI implementation, and digital transformation services. Expert guidance for your technology initiatives."
-        keywords={['contact cloudmanual', 'cloud consulting', 'AI consulting', 'cloud architect', 'digital transformation']}
-        url={`${window.location.origin}/contact`}
-        type="website"
-      />
+    <PageTransition>
+      <Layout>
+        <SEOHead
+          title="Contact CloudManual - Cloud Architecture & AI Consulting"
+          description="Get in touch with Sumit Malik for cloud architecture consulting, AI implementation, and digital transformation services. Expert guidance for your technology initiatives."
+          keywords={['contact cloudmanual', 'cloud consulting', 'AI consulting', 'cloud architect', 'digital transformation']}
+          url={`${window.location.origin}/contact`}
+          type="website"
+        />
 
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20 px-6 overflow-hidden">
@@ -467,7 +469,8 @@ const Contact: React.FC = () => {
           </div>
         </div>
       </section>
-    </Layout>
+      </Layout>
+    </PageTransition>
   );
 };
 

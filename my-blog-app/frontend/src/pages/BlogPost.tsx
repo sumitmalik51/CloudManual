@@ -5,6 +5,9 @@ import Layout from '../components/layout/Layout';
 import SEOHead from '../components/seo/SEOHead';
 import { LoadingPage } from '../components/ui/Loading';
 import ErrorMessage from '../components/ui/ErrorMessage';
+import PageTransition from '../components/ui/PageTransition';
+import ReadingProgressBar from '../components/ui/ReadingProgressBar';
+import Comments from '../components/ui/Comments';
 import { blogAPI, type Post } from '../utils/api';
 import { formatDate, getErrorMessage, generateMetaTitle, generateMetaDescription } from '../utils/helpers';
 
@@ -112,19 +115,21 @@ const BlogPost: React.FC = () => {
   }
 
   return (
-    <Layout>
-      <SEOHead
-        title={generateMetaTitle(post.metaTitle || post.title)}
-        description={post.metaDescription || post.excerpt}
-        keywords={post.tags}
-        image={post.featuredImage}
-        url={window.location.href}
-        type="article"
-        author={post.author}
-        publishedTime={post.createdAt}
-        modifiedTime={post.updatedAt}
-        tags={post.tags}
-      />
+    <PageTransition>
+      <ReadingProgressBar />
+      <Layout>
+        <SEOHead
+          title={generateMetaTitle(post.metaTitle || post.title)}
+          description={post.metaDescription || post.excerpt}
+          keywords={post.tags}
+          image={post.featuredImage}
+          url={window.location.href}
+          type="article"
+          author={post.author}
+          publishedTime={post.createdAt}
+          modifiedTime={post.updatedAt}
+          tags={post.tags}
+        />
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="mb-8">
@@ -345,8 +350,14 @@ const BlogPost: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Comments Section */}
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Comments postId={post.id} />
+        </div>
       </article>
-    </Layout>
+      </Layout>
+    </PageTransition>
   );
 };
 

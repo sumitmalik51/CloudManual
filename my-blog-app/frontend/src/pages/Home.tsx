@@ -11,13 +11,12 @@ const Home: React.FC = () => {
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('All');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'latest' | 'popular' | 'trending'>('latest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isSearching, setIsSearching] = useState(false);
+  const [showAllPosts, setShowAllPosts] = useState(false);
   const [stats, setStats] = useState({
     totalPosts: 0,
     totalViews: 0,
@@ -25,9 +24,8 @@ const Home: React.FC = () => {
     categories: 0
   });
   
-  const observer = useRef<IntersectionObserver | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const postsPerPage = 6;
+  const maxHomePosts = 10; // Limit homepage to 10 posts
 
   // Utility function to estimate reading time
   const estimateReadingTime = (content: string) => {
@@ -60,33 +58,26 @@ const Home: React.FC = () => {
     try {
       setError(null);
       const data = await blogAPI.getPosts({ 
-        page, 
-        limit: postsPerPage,
+        limit: showAllPosts ? undefined : maxHomePosts,
         ...(category !== 'All' && { category: category })
       });
       
-      if (page === 1) {
-        setPosts(data.posts);
-        setAllPosts(data.posts);
-        // Simulate stats (in real app, this would come from API)
-        setStats({
-          totalPosts: data.pagination?.totalPosts || data.posts.length,
-          totalViews: Math.floor(Math.random() * 50000) + 10000,
-          totalReaders: Math.floor(Math.random() * 5000) + 1000,
-          categories: categories.length - 1
-        });
-      } else {
-        setPosts(prev => [...prev, ...data.posts]);
-        setAllPosts(prev => [...prev, ...data.posts]);
-      }
+      setPosts(data.posts);
+      setAllPosts(data.posts);
+      // Simulate stats (in real app, this would come from API)
+      setStats({
+        totalPosts: data.pagination?.totalPosts || data.posts.length,
+        totalViews: Math.floor(Math.random() * 50000) + 10000,
+        totalReaders: Math.floor(Math.random() * 5000) + 1000,
+        categories: categories.length - 1
+      });
       
-      setHasMore(data.posts.length === postsPerPage);
       setLoading(false);
     } catch (err) {
       setError(getErrorMessage(err));
       setLoading(false);
     }
-  }, [page, category]);
+  }, [category, showAllPosts, maxHomePosts]);
 
   useEffect(() => {
     fetchPosts();
@@ -94,23 +85,50 @@ const Home: React.FC = () => {
 
   const categories = ['All', 'Cloud', 'DevOps', 'AI', 'Security', 'WebDev'];
 
-  const lastPostRef = useCallback((node: HTMLDivElement | null) => {
-    if (loading) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        setPage(prev => prev + 1);
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [loading, hasMore]);
-
   const handleCategoryChange = (newCategory: string) => {
     setCategory(newCategory);
-    setPage(1);
     setPosts([]);
-    setHasMore(true);
+    setShowAllPosts(false);
     setLoading(true);
+  };
+
+  const handleViewAllPosts = () => {
+    setShowAllPosts(true);
+    setLoading(true);
+  };
+
+  const handleShowLess = () => {
+    setShowAllPosts(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLikePost = async (postSlug: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    try {
+      const result = await blogAPI.likePost(postSlug);
+      
+      // Update the posts state with the new like count
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.slug === postSlug 
+            ? { ...post, likes: result.likes }
+            : post
+        )
+      );
+      
+      setAllPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.slug === postSlug 
+            ? { ...post, likes: result.likes }
+            : post
+        )
+      );
+    } catch (error) {
+      console.error('Error liking post:', error);
+      // Optional: show a toast notification for errors
+    }
   };
 
   return (
@@ -449,7 +467,6 @@ const Home: React.FC = () => {
               <ErrorMessage
                 message={error}
                 onRetry={() => {
-                  setPage(1);
                   setPosts([]);
                   setLoading(true);
                   fetchPosts();
@@ -459,13 +476,11 @@ const Home: React.FC = () => {
             )}
 
             <div className={`grid gap-8 ${viewMode === 'grid' ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
-              {posts.map((post, i) => {
-                const isLast = i === posts.length - 1;
+              {posts.slice(0, showAllPosts ? posts.length : maxHomePosts).map((post, i) => {
                 const readingTime = estimateReadingTime(post.content || post.excerpt || '');
                 
                 return (
                   <div 
-                    ref={isLast ? lastPostRef : null} 
                     key={post.id} 
                     className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group ${
                       viewMode === 'list' ? 'md:flex md:h-64' : ''
@@ -546,11 +561,14 @@ const Home: React.FC = () => {
                         {/* Action Buttons */}
                         <div className="flex items-center space-x-2">
                           {/* Like Button */}
-                          <button className="flex items-center space-x-1 px-2 py-1 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
+                          <button 
+                            onClick={(e) => handleLikePost(post.slug, e)}
+                            className="flex items-center space-x-1 px-2 py-1 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-red-500 dark:hover:text-red-400 transition-colors duration-200"
+                          >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                             </svg>
-                            <span>{Math.floor(Math.random() * 20) + 5}</span>
+                            <span>{post.likes || 0}</span>
                           </button>
 
                           {/* Share Button */}
@@ -602,10 +620,53 @@ const Home: React.FC = () => {
               ))}
             </div>
 
-            {/* Load More Indicator */}
-            {!hasMore && posts.length > 0 && (
+            {/* View All Posts Button */}
+            {!showAllPosts && posts.length >= maxHomePosts && (
               <div className="text-center mt-12">
-                <p className="text-gray-500 dark:text-gray-400">You've reached the end! 🎉</p>
+                <button
+                  onClick={handleViewAllPosts}
+                  className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group"
+                >
+                  <span>View All Posts</span>
+                  <svg className="ml-2 w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+                  Showing {Math.min(posts.length, maxHomePosts)} of {posts.length} posts
+                </p>
+              </div>
+            )}
+
+            {/* End message for when showing all posts */}
+            {showAllPosts && posts.length > 0 && (
+              <div className="text-center mt-12 space-y-4">
+                <div className="inline-flex items-center px-6 py-3 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  You've seen all {posts.length} posts! 🎉
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <button
+                    onClick={handleShowLess}
+                    className="inline-flex items-center px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                    Show Less
+                  </button>
+                  <Link 
+                    to="/blog"
+                    className="inline-flex items-center px-6 py-3 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium transition-colors duration-200"
+                  >
+                    Visit Blog Page
+                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </Link>
+                </div>
               </div>
             )}
           </div>

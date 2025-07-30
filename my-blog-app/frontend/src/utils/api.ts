@@ -56,6 +56,7 @@ export interface Post {
   status: 'published' | 'draft';
   featuredImage?: string;
   views: number;
+  likes: number;
   slug: string;
   metaTitle?: string;
   metaDescription?: string;
@@ -122,6 +123,11 @@ export const blogAPI = {
 
   getPostBySlug: async (slug: string): Promise<Post> => {
     const response = await api.get(`/posts/${slug}`);
+    return response.data;
+  },
+
+  likePost: async (slug: string): Promise<{ likes: number }> => {
+    const response = await api.post(`/posts/${slug}/like`);
     return response.data;
   },
 

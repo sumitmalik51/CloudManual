@@ -18,11 +18,12 @@ const Footer: React.FC = () => {
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-2">
             <Link to="/" className="group inline-block">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent group-hover:from-blue-200 group-hover:to-purple-200 transition-all duration-300">
+              <h2 className="text-2xl font-bold text-white group-hover:bg-gradient-to-r group-hover:from-blue-200 group-hover:to-purple-200 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-300 relative">
                 CloudManual
+                <div className="absolute -bottom-1 left-0 w-8 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"></div>
               </h2>
             </Link>
-            <p className="mt-4 text-gray-400 max-w-md leading-relaxed">
+            <p className="mt-4 text-gray-300 max-w-md leading-relaxed">
               Your comprehensive guide to cloud technologies, tutorials, and best practices. 
               Master cloud computing with expert insights and practical guides.
             </p>
@@ -64,7 +65,7 @@ const Footer: React.FC = () => {
           {/* Quick Links */}
           <div>
             <h3 className="text-white font-semibold mb-4 relative">
-              <span className="bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
+              <span className="text-white">
                 Quick Links
               </span>
               <div className="absolute -bottom-1 left-0 w-8 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"></div>
@@ -73,36 +74,36 @@ const Footer: React.FC = () => {
               <li>
                 <Link 
                   to="/" 
-                  className="group text-gray-400 hover:text-white transition-all duration-300 inline-flex items-center"
+                  className="group text-gray-300 hover:text-white transition-all duration-300 inline-flex items-center"
                 >
-                  <span className="mr-2 w-1 h-1 bg-gray-500 rounded-full group-hover:bg-blue-400 transition-colors duration-300"></span>
+                  <span className="mr-2 w-1 h-1 bg-gray-400 rounded-full group-hover:bg-blue-400 transition-colors duration-300"></span>
                   Home
                 </Link>
               </li>
               <li>
                 <Link 
                   to="/blog" 
-                  className="group text-gray-400 hover:text-white transition-all duration-300 inline-flex items-center"
+                  className="group text-gray-300 hover:text-white transition-all duration-300 inline-flex items-center"
                 >
-                  <span className="mr-2 w-1 h-1 bg-gray-500 rounded-full group-hover:bg-blue-400 transition-colors duration-300"></span>
+                  <span className="mr-2 w-1 h-1 bg-gray-400 rounded-full group-hover:bg-blue-400 transition-colors duration-300"></span>
                   All Posts
                 </Link>
               </li>
               <li>
                 <Link 
                   to="/about" 
-                  className="group text-gray-400 hover:text-white transition-all duration-300 inline-flex items-center"
+                  className="group text-gray-300 hover:text-white transition-all duration-300 inline-flex items-center"
                 >
-                  <span className="mr-2 w-1 h-1 bg-gray-500 rounded-full group-hover:bg-blue-400 transition-colors duration-300"></span>
+                  <span className="mr-2 w-1 h-1 bg-gray-400 rounded-full group-hover:bg-blue-400 transition-colors duration-300"></span>
                   About
                 </Link>
               </li>
               <li>
                 <Link 
                   to="/contact" 
-                  className="group text-gray-400 hover:text-white transition-all duration-300 inline-flex items-center"
+                  className="group text-gray-300 hover:text-white transition-all duration-300 inline-flex items-center"
                 >
-                  <span className="mr-2 w-1 h-1 bg-gray-500 rounded-full group-hover:bg-blue-400 transition-colors duration-300"></span>
+                  <span className="mr-2 w-1 h-1 bg-gray-400 rounded-full group-hover:bg-blue-400 transition-colors duration-300"></span>
                   Contact
                 </Link>
               </li>
@@ -112,7 +113,7 @@ const Footer: React.FC = () => {
           {/* Categories */}
           <div>
             <h3 className="text-white font-semibold mb-4 relative">
-              <span className="bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
+              <span className="text-white">
                 Categories
               </span>
               <div className="absolute -bottom-1 left-0 w-8 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500"></div>
@@ -121,36 +122,36 @@ const Footer: React.FC = () => {
               <li>
                 <Link 
                   to="/blog?category=technology" 
-                  className="group text-gray-400 hover:text-white transition-all duration-300 inline-flex items-center"
+                  className="group text-gray-300 hover:text-white transition-all duration-300 inline-flex items-center"
                 >
-                  <span className="mr-2 w-1 h-1 bg-gray-500 rounded-full group-hover:bg-purple-400 transition-colors duration-300"></span>
+                  <span className="mr-2 w-1 h-1 bg-gray-400 rounded-full group-hover:bg-purple-400 transition-colors duration-300"></span>
                   Technology
                 </Link>
               </li>
               <li>
                 <Link 
                   to="/blog?category=programming" 
-                  className="group text-gray-400 hover:text-white transition-all duration-300 inline-flex items-center"
+                  className="group text-gray-300 hover:text-white transition-all duration-300 inline-flex items-center"
                 >
-                  <span className="mr-2 w-1 h-1 bg-gray-500 rounded-full group-hover:bg-purple-400 transition-colors duration-300"></span>
+                  <span className="mr-2 w-1 h-1 bg-gray-400 rounded-full group-hover:bg-purple-400 transition-colors duration-300"></span>
                   Programming
                 </Link>
               </li>
               <li>
                 <Link 
                   to="/blog?category=design" 
-                  className="group text-gray-400 hover:text-white transition-all duration-300 inline-flex items-center"
+                  className="group text-gray-300 hover:text-white transition-all duration-300 inline-flex items-center"
                 >
-                  <span className="mr-2 w-1 h-1 bg-gray-500 rounded-full group-hover:bg-purple-400 transition-colors duration-300"></span>
+                  <span className="mr-2 w-1 h-1 bg-gray-400 rounded-full group-hover:bg-purple-400 transition-colors duration-300"></span>
                   Design
                 </Link>
               </li>
               <li>
                 <Link 
                   to="/blog?category=lifestyle" 
-                  className="group text-gray-400 hover:text-white transition-all duration-300 inline-flex items-center"
+                  className="group text-gray-300 hover:text-white transition-all duration-300 inline-flex items-center"
                 >
-                  <span className="mr-2 w-1 h-1 bg-gray-500 rounded-full group-hover:bg-purple-400 transition-colors duration-300"></span>
+                  <span className="mr-2 w-1 h-1 bg-gray-400 rounded-full group-hover:bg-purple-400 transition-colors duration-300"></span>
                   Lifestyle
                 </Link>
               </li>
@@ -159,27 +160,27 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Section */}
-        <div className="mt-12 pt-8 border-t border-gray-800/50 backdrop-blur-sm">
+        <div className="mt-12 pt-8 border-t border-gray-700/50 backdrop-blur-sm">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-300 text-sm">
               © {currentYear} CloudManual. All rights reserved.
             </p>
             <div className="mt-4 md:mt-0 flex space-x-6">
               <Link 
                 to="/privacy" 
-                className="text-gray-400 hover:text-white text-sm transition-all duration-300 hover:translate-y-[-1px]"
+                className="text-gray-300 hover:text-white text-sm transition-all duration-300 hover:translate-y-[-1px]"
               >
                 Privacy Policy
               </Link>
               <Link 
                 to="/terms" 
-                className="text-gray-400 hover:text-white text-sm transition-all duration-300 hover:translate-y-[-1px]"
+                className="text-gray-300 hover:text-white text-sm transition-all duration-300 hover:translate-y-[-1px]"
               >
                 Terms of Service
               </Link>
               <a 
                 href="mailto:contact@cloudmanual.com" 
-                className="text-gray-400 hover:text-white text-sm transition-all duration-300 hover:translate-y-[-1px]"
+                className="text-gray-300 hover:text-white text-sm transition-all duration-300 hover:translate-y-[-1px]"
               >
                 Contact Us
               </a>

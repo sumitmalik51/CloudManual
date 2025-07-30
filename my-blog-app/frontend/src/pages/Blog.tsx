@@ -4,6 +4,7 @@ import Layout from '../components/layout/Layout';
 import BlogListCard from '../components/ui/BlogListCard';
 import SearchBar from '../components/ui/SearchBar';
 import ErrorMessage from '../components/ui/ErrorMessage';
+import PageTransition from '../components/ui/PageTransition';
 import { blogAPI, type PostsResponse } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
 
@@ -77,8 +78,9 @@ const Blog: React.FC = () => {
   const hasActiveFilters = category || tag || search;
 
   return (
-    <Layout>
-      {/* Top Banner with Gradient Background */}
+    <PageTransition>
+      <Layout>
+        {/* Top Banner with Gradient Background */}
       <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="floating-element top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
@@ -338,7 +340,8 @@ const Blog: React.FC = () => {
           </Link>
         </div>
       </div>
-    </Layout>
+      </Layout>
+    </PageTransition>
   );
 };
 

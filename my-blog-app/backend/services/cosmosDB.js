@@ -62,6 +62,7 @@ class CosmosDBService {
         tags: postData.tags || [],
         category: postData.category || '',
         views: postData.views || 0,
+        likes: postData.likes || 0,
         metaTitle: postData.metaTitle || '',
         metaDescription: postData.metaDescription || '',
         featuredImage: postData.featuredImage || '',
@@ -268,6 +269,53 @@ class CosmosDBService {
       return resources[0] || 0;
     } catch (error) {
       console.error('Error getting post count:', error);
+      throw error;
+    }
+  }
+
+  async incrementLikes(postSlug) {
+    try {
+      console.log(`Incrementing likes for post with slug: ${postSlug}`);
+      
+      // Check if we recently incremented likes for this post
+      const now = Date.now();
+      const lastIncrement = this.recentViewIncrements.get(`likes_${postSlug}`);
+      
+      if (lastIncrement && (now - lastIncrement) < this.viewIncrementCooldown) {
+        console.log(`Like increment skipped for ${postSlug} - within cooldown period`);
+        // Return the current like count without incrementing
+        const post = await this.getPostBySlug(postSlug);
+        return post ? post.likes || 0 : 0;
+      }
+      
+      // Find the post by slug instead of internal id
+      const post = await this.getPostBySlug(postSlug);
+      
+      if (!post) {
+        throw new Error('Post not found for like increment');
+      }
+
+      const newLikes = (post.likes || 0) + 1;
+      console.log(`Current likes: ${post.likes || 0}, incrementing to: ${newLikes}`);
+      
+      // Update the post directly using Cosmos DB internal id and partition key
+      const updatedPost = {
+        ...post,
+        likes: newLikes,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Use the Cosmos DB internal id (from the document) and partition key
+      await this.container.item(post.id, post.type).replace(updatedPost);
+      
+      // Track this increment
+      this.recentViewIncrements.set(`likes_${postSlug}`, now);
+      
+      console.log(`Successfully incremented likes to ${newLikes} for post: ${post.title}`);
+      
+      return newLikes;
+    } catch (error) {
+      console.error('Error incrementing likes:', error);
       throw error;
     }
   }

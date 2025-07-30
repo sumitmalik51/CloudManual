@@ -511,6 +511,36 @@ router.get('/admin/analytics', authenticateToken, async (req, res) => {
 });
 
 // GET /api/posts/:slug - Get a single blog post by slug (public)
+// POST /api/posts/:slug/like - Increment likes for a post (public)
+router.post('/:slug/like', async (req, res) => {
+  try {
+    const postSlug = req.params.slug;
+    
+    if (!postSlug) {
+      return res.status(400).json({ message: 'Post slug is required' });
+    }
+
+    // Increment like count using slug
+    try {
+      const newLikes = await cosmosDB.incrementLikes(postSlug);
+      console.log(`Successfully incremented likes for post: ${postSlug}`);
+      res.json({ likes: newLikes });
+    } catch (likeError) {
+      console.error('Error incrementing likes:', likeError.message);
+      res.status(500).json({ 
+        message: 'Error incrementing likes',
+        error: likeError.message 
+      });
+    }
+  } catch (error) {
+    console.error('Error in like endpoint:', error);
+    res.status(500).json({ 
+      message: 'Error processing like request',
+      error: error.message 
+    });
+  }
+});
+
 router.get('/:slug', async (req, res) => {
   try {
     const post = await cosmosDB.getPostBySlug(req.params.slug);

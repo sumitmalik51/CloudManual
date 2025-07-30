@@ -5,6 +5,9 @@ import Layout from '../components/layout/Layout';
 import SEOHead from '../components/seo/SEOHead';
 import { LoadingPage } from '../components/ui/Loading';
 import ErrorMessage from '../components/ui/ErrorMessage';
+import PageTransition from '../components/ui/PageTransition';
+import ReadingProgressBar from '../components/ui/ReadingProgressBar';
+import Comments from '../components/ui/Comments';
 import { blogAPI, type Post } from '../utils/api';
 import { formatDate, getErrorMessage, generateMetaTitle, generateMetaDescription } from '../utils/helpers';
 
@@ -67,6 +70,19 @@ const BlogPost: React.FC = () => {
     fetchPost();
   }, [slug]);
 
+  const handleLikePost = async () => {
+    if (!post) return;
+    
+    try {
+      const result = await blogAPI.likePost(post.slug);
+      setPost(prevPost => 
+        prevPost ? { ...prevPost, likes: result.likes } : null
+      );
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -99,19 +115,21 @@ const BlogPost: React.FC = () => {
   }
 
   return (
-    <Layout>
-      <SEOHead
-        title={generateMetaTitle(post.metaTitle || post.title)}
-        description={post.metaDescription || post.excerpt}
-        keywords={post.tags}
-        image={post.featuredImage}
-        url={window.location.href}
-        type="article"
-        author={post.author}
-        publishedTime={post.createdAt}
-        modifiedTime={post.updatedAt}
-        tags={post.tags}
-      />
+    <PageTransition>
+      <ReadingProgressBar />
+      <Layout>
+        <SEOHead
+          title={generateMetaTitle(post.metaTitle || post.title)}
+          description={post.metaDescription || post.excerpt}
+          keywords={post.tags}
+          image={post.featuredImage}
+          url={window.location.href}
+          type="article"
+          author={post.author}
+          publishedTime={post.createdAt}
+          modifiedTime={post.updatedAt}
+          tags={post.tags}
+        />
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="mb-8">
@@ -190,6 +208,17 @@ const BlogPost: React.FC = () => {
               </svg>
               <span>{post.views} views</span>
             </div>
+
+            {/* Like Button */}
+            <button 
+              onClick={handleLikePost}
+              className="flex items-center text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors duration-200"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              <span>{post.likes || 0} likes</span>
+            </button>
 
             {post.views > 0 && (
               <div className="flex items-center">
@@ -321,8 +350,14 @@ const BlogPost: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Comments Section */}
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Comments postId={post.id} />
+        </div>
       </article>
-    </Layout>
+      </Layout>
+    </PageTransition>
   );
 };
 

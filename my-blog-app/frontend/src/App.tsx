@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
+import About from './pages/About';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminPosts from './pages/AdminPosts';
@@ -26,7 +27,7 @@ function App() {
           <Route path="/admin/posts/:id/edit" element={<PostEditor />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           {/* Additional routes */}
-          <Route path="/about" element={<div>About page coming soon...</div>} />
+          <Route path="/about" element={<About />} />
           <Route path="*" element={
             <div className="flex items-center justify-center min-h-screen">
               <div className="text-center">

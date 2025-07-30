@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import SEOHead from '../components/seo/SEOHead';
 import ErrorMessage from '../components/ui/ErrorMessage';
+import TopicsModal from '../components/ui/TopicsModal';
 import { blogAPI } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
 
@@ -17,15 +18,76 @@ const Home: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isSearching, setIsSearching] = useState(false);
   const [showAllPosts, setShowAllPosts] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [showTopicsModal, setShowTopicsModal] = useState(false);
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [stats, setStats] = useState({
     totalPosts: 0,
     totalViews: 0,
     totalReaders: 0,
     categories: 0
   });
+
+  // Topics data for modal
+  const topicsData = [
+    {
+      name: 'Cloud Architecture',
+      count: Math.floor(stats.totalPosts * 0.25),
+      color: 'from-blue-500 to-cyan-500',
+      description: 'Azure, AWS, and multi-cloud architecture patterns and best practices'
+    },
+    {
+      name: 'DevOps & CI/CD',
+      count: Math.floor(stats.totalPosts * 0.20),
+      color: 'from-green-500 to-emerald-500',
+      description: 'Automation, deployment pipelines, and infrastructure as code'
+    },
+    {
+      name: 'AI & Machine Learning',
+      count: Math.floor(stats.totalPosts * 0.20),
+      color: 'from-purple-500 to-pink-500',
+      description: 'AI implementation, ML models, and intelligent automation'
+    },
+    {
+      name: 'Containerization',
+      count: Math.floor(stats.totalPosts * 0.20),
+      color: 'from-orange-500 to-red-500',
+      description: 'Docker, Kubernetes, and container orchestration'
+    },
+    {
+      name: 'Development Tools',
+      count: Math.floor(stats.totalPosts * 0.15),
+      color: 'from-indigo-500 to-purple-500',
+      description: 'IDEs, frameworks, and productivity tools for developers'
+    }
+  ];
   
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const maxHomePosts = 10; // Limit homepage to 10 posts
+
+  // Dark mode state - you can connect this to a context or localStorage
+  const [isDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('darkMode') === 'true' || 
+             (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    return false;
+  });
+
+  // Save dark mode preference
+  useEffect(() => {
+    localStorage.setItem('darkMode', isDarkMode.toString());
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Utility function to estimate reading time
   const estimateReadingTime = (content: string) => {
@@ -34,10 +96,33 @@ const Home: React.FC = () => {
     return Math.ceil(words / wordsPerMinute);
   };
 
-  // Debounced search function
+  // Sample search suggestions (in real app, this would come from API)
+  const popularSearches = [
+    'GitHub Copilot tutorial',
+    'Azure container apps',
+    'Docker best practices',
+    'Kubernetes deployment',
+    'AI model implementation',
+    'DevOps automation',
+    'TypeScript performance',
+    'Cloud architecture patterns'
+  ];
+
+  // Enhanced debounced search function with suggestions
   const debouncedSearch = useCallback((query: string) => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Update suggestions
+    if (query.length > 0) {
+      const suggestions = popularSearches.filter(search => 
+        search.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 5);
+      setSearchSuggestions(suggestions);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
     }
     
     searchTimeoutRef.current = setTimeout(() => {
@@ -51,7 +136,33 @@ const Home: React.FC = () => {
       setPosts(filtered);
       setIsSearching(false);
     }, 300);
-  }, [allPosts]);
+  }, [allPosts, popularSearches]);
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchQuery(suggestion);
+    setShowSuggestions(false);
+    debouncedSearch(suggestion);
+  };
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim()) return;
+    
+    setNewsletterStatus('loading');
+    
+    // Simulate API call (replace with actual newsletter service integration)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setNewsletterStatus('success');
+      setNewsletterEmail('');
+      
+      // Reset status after 3 seconds
+      setTimeout(() => setNewsletterStatus('idle'), 3000);
+    } catch {
+      setNewsletterStatus('error');
+      setTimeout(() => setNewsletterStatus('idle'), 3000);
+    }
+  };
 
   // Enhanced fetch function
   const fetchPosts = useCallback(async () => {
@@ -142,7 +253,8 @@ const Home: React.FC = () => {
       />
       {/* Hero Section */}
       <section 
-        className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-32 px-6 text-center overflow-hidden"
+        className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-32 px-6 text-center overflow-visible"
+        style={{ zIndex: 1 }}
       >
         {/* Enhanced Animated background elements */}
         <div className="absolute inset-0">
@@ -177,12 +289,18 @@ const Home: React.FC = () => {
               </span>
             </h1>
             
-            {/* Live Badge */}
+            {/* Live Badge - Clickable */}
             <div className="flex justify-center mb-6">
-              <div className="flex items-center space-x-2 bg-green-500/20 backdrop-blur-sm rounded-full px-4 py-2 border border-green-400/30">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-sm font-semibold text-green-100">Live & Updated Daily</span>
-              </div>
+              <Link 
+                to="/whats-new"
+                className="group flex items-center space-x-2 bg-green-500/20 backdrop-blur-sm rounded-full px-4 py-2 border border-green-400/30 hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 cursor-pointer"
+              >
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse group-hover:animate-bounce"></div>
+                <span className="text-sm font-semibold text-green-100 group-hover:text-white">Live & Updated Daily</span>
+                <svg className="w-4 h-4 text-green-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </div>
 
@@ -190,31 +308,80 @@ const Home: React.FC = () => {
             Your modern guide to Cloud, AI, and DevOps — hands-on, simplified, and real-world focused.
           </p>
           
-          {/* Premium Search Bar */}
-          <div className="max-w-3xl mx-auto mb-12">
+          {/* Premium Search Bar with Autocomplete */}
+          <div className="max-w-3xl mx-auto mb-12 relative z-50">
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-500"></div>
-              <div className="relative bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-2">
+              <div className={`absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur-lg transition-all duration-500 ${
+                searchFocused ? 'opacity-70 scale-105' : 'opacity-30 group-hover:opacity-50'
+              }`}></div>
+              <div className={`relative bg-white/95 backdrop-blur-xl rounded-2xl border border-white/20 p-2 transition-all duration-300 ${
+                searchFocused ? 'shadow-2xl ring-4 ring-blue-200/50 scale-105' : 'shadow-2xl hover:shadow-3xl'
+              }`}>
                 <div className="flex items-center">
                   <div className="flex-1 relative">
                     <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-                      <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`h-6 w-6 transition-colors duration-300 ${
+                        searchFocused ? 'text-blue-500' : 'text-gray-400'
+                      }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
                     </div>
                     <input
+                      ref={searchInputRef}
                       type="text"
-                      placeholder="Search articles, topics, or technologies..."
+                      placeholder="e.g., GitHub Copilot, Azure Bicep, Docker, TypeScript..."
                       value={searchQuery}
+                      onFocus={() => {
+                        setSearchFocused(true);
+                        if (searchQuery.length > 0) setShowSuggestions(true);
+                      }}
+                      onBlur={() => {
+                        setSearchFocused(false);
+                        // Delay hiding suggestions to allow clicks
+                        setTimeout(() => setShowSuggestions(false), 150);
+                      }}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
                         debouncedSearch(e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          setShowSuggestions(false);
+                          debouncedSearch(searchQuery);
+                          // Optional: Navigate to blog page with search
+                          // window.location.href = `/blog?search=${encodeURIComponent(searchQuery)}`;
+                        }
                       }}
                       className="w-full pl-14 pr-6 py-4 text-lg text-gray-800 placeholder-gray-500 bg-transparent border-0 focus:outline-none focus:ring-0"
                     />
                     {isSearching && (
                       <div className="absolute inset-y-0 right-16 flex items-center">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                      </div>
+                    )}
+                    
+                    {/* Search Suggestions Dropdown */}
+                    {showSuggestions && searchSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-16 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto backdrop-blur-xl"
+                           style={{ zIndex: 999999 }}>
+                        <div className="p-2">
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-3 py-2 uppercase tracking-wide">
+                            Popular Searches
+                          </div>
+                          {searchSuggestions.map((suggestion, index) => (
+                            <button
+                              key={index}
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors duration-200 flex items-center group"
+                            >
+                              <svg className="w-4 h-4 mr-3 text-gray-400 group-hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              </svg>
+                              <span className="text-sm">{suggestion}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -231,20 +398,42 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Search Tags */}
+            {/* Enhanced Quick Search Tags with toggleable filters */}
             <div className="flex flex-wrap justify-center gap-3 mt-6">
-              {['Azure', 'AWS', 'Docker', 'Kubernetes', 'AI/ML', 'DevOps'].map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => {
-                    setSearchQuery(tag);
-                    debouncedSearch(tag);
-                  }}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-white font-medium transition-all duration-300 hover:scale-105 border border-white/20"
-                >
-                  {tag}
-                </button>
-              ))}
+              {['Azure', 'AWS', 'Docker', 'Kubernetes', 'AI/ML', 'DevOps'].map((tag) => {
+                const isActive = activeFilters.includes(tag) || searchQuery === tag;
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => {
+                      if (isActive) {
+                        setActiveFilters(prev => prev.filter(f => f !== tag));
+                        setSearchQuery('');
+                        debouncedSearch('');
+                      } else {
+                        setActiveFilters(prev => [...prev, tag]);
+                        setSearchQuery(tag);
+                        debouncedSearch(tag);
+                      }
+                    }}
+                    className={`group relative px-4 py-2 backdrop-blur-sm rounded-lg font-medium transition-all duration-300 border transform hover:scale-105 hover:-translate-y-1 ${
+                      isActive 
+                        ? 'bg-white/25 text-white border-white/40 shadow-lg' 
+                        : 'bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border-white/20 hover:border-white/30'
+                    }`}
+                  >
+                    <div className={`absolute inset-0 rounded-lg transition-opacity duration-300 ${
+                      isActive 
+                        ? 'bg-gradient-to-r from-blue-400/20 to-purple-400/20 opacity-100' 
+                        : 'bg-gradient-to-r from-blue-400/10 to-purple-400/10 opacity-0 group-hover:opacity-100'
+                    }`}></div>
+                    <span className="relative z-10">{tag}</span>
+                    {isActive && (
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
           
@@ -252,36 +441,82 @@ const Home: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12">
             <Link 
               to="/blog"
-              className="group inline-flex items-center justify-center bg-white text-indigo-900 font-bold px-10 py-4 rounded-2xl shadow-2xl hover:bg-gray-50 hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-1 hover:scale-105"
+              className="group inline-flex items-center justify-center bg-white text-indigo-900 font-bold px-10 py-4 rounded-2xl shadow-2xl hover:bg-gray-50 transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 hover:shadow-3xl"
             >
+              <span className="text-2xl mr-3">📚</span>
               <span>Explore Articles</span>
               <svg className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
             <button 
-              className="group inline-flex items-center justify-center bg-transparent border-2 border-white text-white font-bold px-10 py-4 rounded-2xl hover:bg-white hover:text-indigo-900 transition-all duration-300 transform hover:-translate-y-1 hover:scale-105"
+              className="group inline-flex items-center justify-center bg-transparent border-2 border-white text-white font-bold px-10 py-4 rounded-2xl hover:bg-white hover:text-indigo-900 transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 hover:shadow-2xl"
             >
-              <svg className="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="text-2xl mr-3">🎥</span>
+              <span>Watch Tutorials</span>
+              <svg className="ml-2 w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M15 14h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>Watch Tutorials</span>
             </button>
           </div>
 
-          {/* Enhanced Live Stats */}
+          {/* Enhanced Live Stats with Tooltips */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             {[
-              { label: 'Articles', value: stats.totalPosts.toLocaleString(), icon: '📚', color: 'from-blue-500 to-cyan-500' },
-              { label: 'Readers', value: `${Math.floor(stats.totalReaders / 1000)}K+`, icon: '👥', color: 'from-purple-500 to-pink-500' },
-              { label: 'Views', value: `${Math.floor(stats.totalViews / 1000)}K+`, icon: '👁️', color: 'from-green-500 to-emerald-500' },
-              { label: 'Topics', value: stats.categories.toString(), icon: '🏷️', color: 'from-orange-500 to-red-500' },
+              { 
+                label: 'Articles', 
+                value: stats.totalPosts.toLocaleString(), 
+                icon: '📚', 
+                color: 'from-blue-500 to-cyan-500',
+                tooltip: 'Total published articles covering cloud, AI, and DevOps topics',
+                clickable: false
+              },
+              { 
+                label: 'Readers', 
+                value: `${Math.floor(stats.totalReaders / 1000)}K+`, 
+                icon: '👥', 
+                color: 'from-purple-500 to-pink-500',
+                tooltip: 'Monthly active readers engaging with our content',
+                clickable: false
+              },
+              { 
+                label: 'Views', 
+                value: `${Math.floor(stats.totalViews / 1000)}K+`, 
+                icon: '👁️', 
+                color: 'from-green-500 to-emerald-500',
+                tooltip: 'Total unique article views in the past 30 days',
+                clickable: false
+              },
+              { 
+                label: 'Topics', 
+                value: stats.categories.toString(), 
+                icon: '🏷️', 
+                color: 'from-orange-500 to-red-500',
+                tooltip: 'Click to explore our content taxonomy and topic breakdown',
+                clickable: true
+              },
             ].map((stat, index) => (
-              <div key={index} className="group text-center transform hover:scale-110 transition-all duration-500">
+              <div 
+                key={index} 
+                className={`group text-center transform hover:scale-110 transition-all duration-500 relative ${
+                  stat.clickable ? 'cursor-pointer' : ''
+                }`}
+                onClick={stat.clickable ? () => setShowTopicsModal(true) : undefined}
+              >
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10">
+                  <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap">
+                    <div className="relative">
+                      {stat.tooltip}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="relative">
                   <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition-opacity duration-500`}></div>
                   <div className="relative bg-white/15 backdrop-blur-xl rounded-3xl p-6 border border-white/20 hover:border-white/40 transition-all duration-500">
-                    <div className="text-4xl mb-3 transform group-hover:scale-125 transition-transform duration-500">{stat.icon}</div>
+                    <div className="text-4xl mb-3 transform group-hover:scale-125 group-hover:animate-pulse transition-all duration-500">{stat.icon}</div>
                     <div className="text-3xl font-black text-white mb-2 tracking-tight">{stat.value}</div>
                     <div className="text-sm font-medium text-blue-100 uppercase tracking-wider">{stat.label}</div>
                   </div>
@@ -291,15 +526,17 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* Enhanced Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <div className="relative">
-            <div className="absolute inset-0 bg-white/20 rounded-full blur-md"></div>
-            <div className="relative bg-white/10 backdrop-blur-sm rounded-full p-3 border border-white/20">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Enhanced Scroll indicator with bouncing animation */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+          <div className="relative animate-bounce cursor-pointer hover:animate-pulse" onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}>
+            <div className="absolute inset-0 bg-white/20 rounded-full blur-md animate-pulse"></div>
+            <div className="relative bg-white/10 backdrop-blur-sm rounded-full p-3 border border-white/20 hover:bg-white/20 hover:scale-110 transition-all duration-300">
+              <svg className="w-6 h-6 text-white animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ animationDelay: '0.5s' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
               </svg>
             </div>
+            {/* Additional bounce indicator */}
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white/60 rounded-full animate-ping"></div>
           </div>
         </div>
       </section>
@@ -307,28 +544,40 @@ const Home: React.FC = () => {
       {/* Enhanced Category Filter with Sorting */}
       <section className="bg-white dark:bg-gray-900 py-8 px-6 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto">
-          {/* Category Filters */}
+          {/* Enhanced Category Filters with improved animations */}
           <div className="text-center mb-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-300">Filter by Category</h3>
             <div className="flex flex-wrap justify-center gap-3">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => handleCategoryChange(cat)}
-                  className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
-                    category === cat 
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' 
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {cat}
-                  {cat !== 'All' && (
-                    <span className="ml-2 text-xs opacity-75">
-                      {allPosts.filter(p => p.tags?.includes(cat)).length}
+              {categories.map(cat => {
+                const postCount = cat === 'All' ? allPosts.length : allPosts.filter(p => p.tags?.includes(cat)).length;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => handleCategoryChange(cat)}
+                    className={`group relative px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 ${
+                      category === cat 
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25' 
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-gray-200 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-600'
+                    }`}
+                  >
+                    {/* Gradient background on hover for inactive buttons */}
+                    {category !== cat && (
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    )}
+                    
+                    <span className="relative z-10">{cat}</span>
+                    
+                    {/* Post count badge */}
+                    <span className={`relative z-10 ml-2 text-xs px-2 py-1 rounded-full transition-all duration-300 ${
+                      category === cat
+                        ? 'bg-white/20 text-white/80'
+                        : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 group-hover:bg-indigo-100 group-hover:text-indigo-600'
+                    }`}>
+                      {postCount}
                     </span>
-                  )}
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -448,6 +697,117 @@ const Home: React.FC = () => {
           </div>
         </section>
       )}
+
+      {/* What's New / Recent Updates Section */}
+      <section className="py-16 px-6 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-full text-sm font-semibold mb-4">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse mr-2"></div>
+              What's New
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Recent Updates & Additions
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-lg">
+              Stay in the loop with our latest content and platform improvements
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                date: 'July 31, 2025',
+                type: 'New Article',
+                title: 'Advanced GitHub Copilot Patterns',
+                description: 'Deep dive into advanced prompting techniques and productivity tips',
+                icon: '📝',
+                badge: 'NEW'
+              },
+              {
+                date: 'July 29, 2025',
+                type: 'Updated Guide',
+                title: 'Azure Container Apps Best Practices',
+                description: 'Updated with latest security recommendations and scaling patterns',
+                icon: '🔄',
+                badge: 'UPDATED'
+              },
+              {
+                date: 'July 28, 2025',
+                type: 'Feature',
+                title: 'Enhanced Search & Autocomplete',
+                description: 'Improved search experience with intelligent suggestions',
+                icon: '✨',
+                badge: 'FEATURE'
+              },
+              {
+                date: 'July 26, 2025',
+                type: 'New Series',
+                title: 'AI Implementation Roadmap',
+                description: 'Complete series on enterprise AI adoption strategies',
+                icon: '🤖',
+                badge: 'SERIES'
+              },
+              {
+                date: 'July 25, 2025',
+                type: 'Tool Update',
+                title: 'Interactive Code Examples',
+                description: 'Added runnable code snippets to all Docker tutorials',
+                icon: '⚡',
+                badge: 'IMPROVED'
+              },
+              {
+                date: 'July 24, 2025',
+                type: 'Community',
+                title: 'Reader Feedback Integration',
+                description: 'New testimonials and community showcase section',
+                icon: '👥',
+                badge: 'COMMUNITY'
+              }
+            ].map((update, index) => (
+              <div key={index} className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 group">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-2xl">{update.icon}</div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">{update.date}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">{update.type}</div>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-bold rounded-full ${
+                    update.badge === 'NEW' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    update.badge === 'UPDATED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                    update.badge === 'FEATURE' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                    update.badge === 'SERIES' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                    update.badge === 'IMPROVED' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
+                    'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200'
+                  }`}>
+                    {update.badge}
+                  </span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200">
+                  {update.title}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                  {update.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <Link 
+              to="/changelog"
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl font-semibold hover:from-gray-700 hover:to-gray-800 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              View Full Changelog
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Main Content */}
       <section className="py-16 px-6 bg-gray-50 dark:bg-gray-950">
@@ -806,16 +1166,7 @@ const Home: React.FC = () => {
                 
                 <div className="space-y-3">
                   <a
-                    href="https://discord.gg/cloudmanual"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-full bg-white/20 backdrop-blur-sm text-white py-3 rounded-lg font-semibold hover:bg-white/30 transition-all duration-300"
-                  >
-                    <span className="mr-2">💬</span>
-                    Join Discord
-                  </a>
-                  <a
-                    href="https://github.com/cloudmanual"
+                    href="https://github.com/sumitmalik51/CloudManual"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center w-full bg-white/20 backdrop-blur-sm text-white py-3 rounded-lg font-semibold hover:bg-white/30 transition-all duration-300"
@@ -857,6 +1208,145 @@ const Home: React.FC = () => {
           </aside>
         </div>
       </section>
+
+      {/* Testimonials Section */}
+      <section className="py-16 px-6 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-950 dark:to-blue-950/20">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              What Our Readers Say
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-lg">
+              Trusted by cloud professionals worldwide
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                quote: "The GitHub Copilot series completely changed how I approach development. Excellent practical examples!",
+                author: "Sarah Chen",
+                role: "Senior DevOps Engineer",
+                company: "TechCorp",
+                avatar: "SC"
+              },
+              {
+                quote: "CloudManual's Azure guides helped me ace my certification. The step-by-step approach is perfect.",
+                author: "Marcus Rodriguez",
+                role: "Cloud Architect",
+                company: "StartupXYZ",
+                avatar: "MR"
+              },
+              {
+                quote: "Finally, AI implementation tutorials that actually work in production. Saved me weeks of research!",
+                author: "Priya Patel",
+                role: "ML Engineer",
+                company: "DataFlow Inc",
+                avatar: "PP"
+              }
+            ].map((testimonial, index) => (
+              <div key={index} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 group">
+                <div className="mb-4">
+                  <svg className="w-8 h-8 text-indigo-500 mb-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
+                  </svg>
+                  <p className="text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                    "{testimonial.quote}"
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
+                    {testimonial.avatar}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900 dark:text-white">{testimonial.author}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{testimonial.role}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-500">{testimonial.company}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Signup Section */}
+      <section className="py-16 px-6 bg-white dark:bg-gray-900">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-900/20 dark:via-purple-900/20 dark:to-pink-900/20 rounded-3xl p-8 md:p-12 border border-indigo-100 dark:border-indigo-800">
+            <div className="mb-6">
+              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full text-sm font-semibold mb-4">
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Newsletter
+              </div>
+              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                Stay Updated with CloudManual
+              </h3>
+              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Get the latest cloud architecture guides, AI implementation tutorials, and DevOps best practices delivered to your inbox weekly.
+              </p>
+            </div>
+            
+            <div className="max-w-md mx-auto">
+              <form onSubmit={handleNewsletterSubmit}>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    required
+                    disabled={newsletterStatus === 'loading'}
+                    className="flex-1 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-50"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={newsletterStatus === 'loading' || !newsletterEmail.trim()}
+                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center min-w-[120px]"
+                  >
+                    {newsletterStatus === 'loading' ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Joining...
+                      </>
+                    ) : (
+                      'Subscribe'
+                    )}
+                  </button>
+                </div>
+              </form>
+              
+              {/* Status Messages */}
+              {newsletterStatus === 'success' && (
+                <div className="mt-3 p-3 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-sm text-center">
+                  🎉 Welcome aboard! Check your email to confirm your subscription.
+                </div>
+              )}
+              {newsletterStatus === 'error' && (
+                <div className="mt-3 p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg text-sm text-center">
+                  ❌ Something went wrong. Please try again later.
+                </div>
+              )}
+              
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                Join 2,500+ cloud professionals • Unsubscribe anytime • No spam, ever
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Topics Modal */}
+      <TopicsModal
+        isOpen={showTopicsModal}
+        onClose={() => setShowTopicsModal(false)}
+        topics={topicsData}
+      />
     </Layout>
   );
 };

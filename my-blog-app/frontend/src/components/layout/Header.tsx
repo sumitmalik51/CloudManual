@@ -4,22 +4,7 @@ import DarkModeToggle from '../ui/DarkModeToggle';
 
 const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    const checkAdminStatus = () => {
-      const adminToken = localStorage.getItem('adminToken');
-      setIsAdmin(!!adminToken);
-    };
-
-    checkAdminStatus();
-    window.addEventListener('storage', checkAdminStatus);
-
-    return () => {
-      window.removeEventListener('storage', checkAdminStatus);
-    };
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -123,7 +108,8 @@ const Header: React.FC = () => {
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   )}
                 </Link>
-                {isAdmin && (
+                {/* Admin button hidden for public site */}
+                {/* {isAdmin && (
                   <Link
                     to="/admin"
                     className={`group relative px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
@@ -137,7 +123,7 @@ const Header: React.FC = () => {
                       <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     )}
                   </Link>
-                )}
+                )} */}
               </nav>
               <div className="ml-4">
                 <DarkModeToggle />

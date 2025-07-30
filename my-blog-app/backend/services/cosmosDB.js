@@ -254,14 +254,39 @@ class CosmosDBService {
     }
   }
 
-  async incrementViews(id) {
+  async incrementViews(postId) {
     try {
-      const post = await this.getPost(id);
-      if (post) {
-        post.views = (post.views || 0) + 1;
-        await this.updatePost(id, { views: post.views });
-        return post.views;
+      console.log(`Incrementing views for post with internal id: ${postId}`);
+      
+      // Find the post by internal Cosmos DB id
+      const querySpec = {
+        query: 'SELECT * FROM c WHERE c.id = @id AND c.type = @type',
+        parameters: [
+          { name: '@id', value: postId },
+          { name: '@type', value: 'post' }
+        ]
+      };
+
+      const { resources } = await this.container.items.query(querySpec).fetchAll();
+      
+      if (resources.length === 0) {
+        throw new Error('Post not found for view increment');
       }
+
+      const post = resources[0];
+      const newViews = (post.views || 0) + 1;
+      
+      // Update the post directly using Cosmos DB internal id and partition key
+      const updatedPost = {
+        ...post,
+        views: newViews,
+        updatedAt: new Date().toISOString()
+      };
+
+      await this.container.item(post.id, post.type).replace(updatedPost);
+      console.log(`Successfully incremented views to ${newViews} for post: ${post.title}`);
+      
+      return newViews;
     } catch (error) {
       console.error('Error incrementing views:', error);
       throw error;

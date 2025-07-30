@@ -69,8 +69,69 @@ export default {
             },
           },
         },
+        // Dark mode typography
+        invert: {
+          css: {
+            '--tw-prose-body': '#d1d5db',
+            '--tw-prose-headings': '#f9fafb',
+            '--tw-prose-lead': '#9ca3af',
+            '--tw-prose-links': '#60a5fa',
+            '--tw-prose-bold': '#f9fafb',
+            '--tw-prose-counters': '#9ca3af',
+            '--tw-prose-bullets': '#6b7280',
+            '--tw-prose-hr': '#374151',
+            '--tw-prose-quotes': '#f9fafb',
+            '--tw-prose-quote-borders': '#374151',
+            '--tw-prose-captions': '#9ca3af',
+            '--tw-prose-code': '#f9fafb',
+            '--tw-prose-pre-code': '#d1d5db',
+            '--tw-prose-pre-bg': '#1f2937',
+            '--tw-prose-th-borders': '#374151',
+            '--tw-prose-td-borders': '#4b5563',
+            color: '#d1d5db',
+            p: {
+              color: '#d1d5db',
+            },
+            h1: {
+              color: '#f9fafb',
+            },
+            h2: {
+              color: '#f9fafb',
+            },
+            h3: {
+              color: '#f9fafb',
+            },
+            h4: {
+              color: '#f9fafb',
+            },
+            h5: {
+              color: '#f9fafb',
+            },
+            h6: {
+              color: '#f9fafb',
+            },
+            strong: {
+              color: '#f9fafb',
+            },
+            a: {
+              color: '#60a5fa',
+              '&:hover': {
+                color: '#93c5fd',
+              },
+            },
+            code: {
+              color: '#f9fafb',
+            },
+            blockquote: {
+              color: '#f9fafb',
+              borderLeftColor: '#374151',
+            },
+          },
+        },
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

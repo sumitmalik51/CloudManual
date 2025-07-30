@@ -102,9 +102,9 @@ const BlogPost: React.FC = () => {
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="mb-8">
-          <ol className="flex items-center space-x-2 text-sm text-gray-500">
+          <ol className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <li>
-              <Link to="/" className="hover:text-primary-600 transition-colors">
+              <Link to="/" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                 Home
               </Link>
             </li>
@@ -114,7 +114,7 @@ const BlogPost: React.FC = () => {
               </svg>
             </li>
             <li>
-              <Link to="/blog" className="hover:text-primary-600 transition-colors">
+              <Link to="/blog" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                 Blog
               </Link>
             </li>
@@ -123,7 +123,7 @@ const BlogPost: React.FC = () => {
                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
               </svg>
             </li>
-            <li className="text-gray-900 truncate">
+            <li className="text-gray-900 dark:text-gray-100 truncate">
               {post.title}
             </li>
           </ol>
@@ -148,12 +148,12 @@ const BlogPost: React.FC = () => {
           )}
 
           {/* Title */}
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-6 leading-tight">
             {post.title}
           </h1>
 
           {/* Meta Information */}
-          <div className="flex flex-wrap items-center gap-6 text-gray-600 mb-6">
+          <div className="flex flex-wrap items-center gap-6 text-gray-600 dark:text-gray-400 mb-6">
             <div className="flex items-center">
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -217,15 +217,15 @@ const BlogPost: React.FC = () => {
         )}
 
         {/* Post Content */}
-        <div className="prose prose-lg max-w-none mb-12">
-          <div className="text-gray-800 leading-relaxed">
+        <div className="prose prose-lg dark:prose-invert max-w-none mb-12">
+          <div className="text-gray-800 dark:text-gray-200 leading-relaxed">
             <ReactMarkdown>{post.content}</ReactMarkdown>
           </div>
         </div>
 
         {/* Share Buttons */}
-        <div className="border-t border-gray-200 pt-8 mb-12">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Share this post</h3>
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-8 mb-12">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Share this post</h3>
           <div className="flex space-x-4">
             <button
               onClick={() => {
@@ -238,7 +238,7 @@ const BlogPost: React.FC = () => {
                   alert('Link copied to clipboard!');
                 }
               }}
-              className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
@@ -250,8 +250,8 @@ const BlogPost: React.FC = () => {
 
         {/* Related Posts */}
         {relatedPosts.length > 0 && (
-          <div className="border-t border-gray-200 pt-12">
-            <h3 className="text-2xl font-bold text-gray-900 mb-8">Related Posts</h3>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-12">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8">Related Posts</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {relatedPosts.map((relatedPost) => (
                 <div key={relatedPost.id} className="card">
@@ -263,18 +263,18 @@ const BlogPost: React.FC = () => {
                     />
                   )}
                   <div className="p-4">
-                    <h4 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
                       <Link
                         to={`/blog/${relatedPost.slug}`}
-                        className="hover:text-primary-600 transition-colors"
+                        className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                       >
                         {relatedPost.title}
                       </Link>
                     </h4>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
                       {relatedPost.excerpt}
                     </p>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-500">
                       {formatDate(relatedPost.createdAt)}
                     </div>
                   </div>
@@ -285,11 +285,11 @@ const BlogPost: React.FC = () => {
         )}
 
         {/* Navigation */}
-        <div className="border-t border-gray-200 pt-8 mt-12">
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-8 mt-12">
           <div className="flex justify-between">
             <Link
               to="/blog"
-              className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium transition-colors"
+              className="inline-flex items-center text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
             >
               <svg className="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -299,7 +299,7 @@ const BlogPost: React.FC = () => {
             
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="inline-flex items-center text-gray-600 hover:text-gray-900 font-medium transition-colors"
+              className="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 font-medium transition-colors"
             >
               Back to Top
               <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

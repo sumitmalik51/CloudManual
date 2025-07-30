@@ -521,9 +521,9 @@ router.get('/:slug', async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Increment view count
-    await cosmosDB.incrementViews(post.id);
-    post.views = (post.views || 0) + 1;
+    // For now, skip view incrementing to avoid Cosmos DB issues
+    // TODO: Fix view incrementing logic later
+    console.log(`Serving post: ${post.title} (slug: ${post.slug})`);
 
     res.json(post);
   } catch (error) {

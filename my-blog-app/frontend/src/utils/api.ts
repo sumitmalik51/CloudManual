@@ -52,6 +52,7 @@ export interface Post {
   excerpt: string;
   author: string;
   tags: string[];
+  category?: string;
   status: 'published' | 'draft';
   featuredImage?: string;
   views: number;
@@ -85,6 +86,7 @@ export interface CreatePostData {
   excerpt?: string;
   author?: string;
   tags?: string[];
+  category?: string;
   featuredImage?: string;
   status?: 'published' | 'draft';
   metaTitle?: string;

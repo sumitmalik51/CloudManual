@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import Layout from '../components/layout/Layout';
+import SEOHead from '../components/seo/SEOHead';
 import { LoadingPage } from '../components/ui/Loading';
 import ErrorMessage from '../components/ui/ErrorMessage';
 import { blogAPI, type Post } from '../utils/api';
@@ -99,6 +100,18 @@ const BlogPost: React.FC = () => {
 
   return (
     <Layout>
+      <SEOHead
+        title={generateMetaTitle(post.metaTitle || post.title)}
+        description={post.metaDescription || post.excerpt}
+        keywords={post.tags}
+        image={post.featuredImage}
+        url={window.location.href}
+        type="article"
+        author={post.author}
+        publishedTime={post.createdAt}
+        modifiedTime={post.updatedAt}
+        tags={post.tags}
+      />
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="mb-8">

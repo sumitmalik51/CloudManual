@@ -6,6 +6,9 @@ class CosmosDBService {
     this.database = null;
     this.container = null;
     this.isConnected = false;
+    // Track recent view increments to prevent duplicates
+    this.recentViewIncrements = new Map();
+    this.viewIncrementCooldown = 5000; // 5 seconds cooldown
   }
 
   async connect() {
@@ -57,6 +60,7 @@ class CosmosDBService {
         status: postData.status || 'draft',
         slug: postData.slug,
         tags: postData.tags || [],
+        category: postData.category || '',
         views: postData.views || 0,
         metaTitle: postData.metaTitle || '',
         metaDescription: postData.metaDescription || '',
@@ -127,7 +131,9 @@ class CosmosDBService {
         offset = 0,
         sortBy = 'createdAt',
         sortOrder = 'desc',
-        search = null
+        search = null,
+        tag = null,
+        category = null
       } = options;
 
       let query = 'SELECT * FROM c WHERE c.type = @type';
@@ -143,6 +149,18 @@ class CosmosDBService {
       if (search) {
         query += ' AND (CONTAINS(LOWER(c.title), LOWER(@search)) OR CONTAINS(LOWER(c.content), LOWER(@search)))';
         parameters.push({ name: '@search', value: search });
+      }
+
+      // Add tag filter
+      if (tag) {
+        query += ' AND ARRAY_CONTAINS(c.tags, @tag)';
+        parameters.push({ name: '@tag', value: tag });
+      }
+
+      // Add category filter
+      if (category) {
+        query += ' AND c.category = @category';
+        parameters.push({ name: '@category', value: category });
       }
 
       // Add sorting
@@ -254,27 +272,30 @@ class CosmosDBService {
     }
   }
 
-  async incrementViews(postId) {
+  async incrementViews(postSlug) {
     try {
-      console.log(`Incrementing views for post with internal id: ${postId}`);
+      console.log(`Incrementing views for post with slug: ${postSlug}`);
       
-      // Find the post by internal Cosmos DB id
-      const querySpec = {
-        query: 'SELECT * FROM c WHERE c.id = @id AND c.type = @type',
-        parameters: [
-          { name: '@id', value: postId },
-          { name: '@type', value: 'post' }
-        ]
-      };
-
-      const { resources } = await this.container.items.query(querySpec).fetchAll();
+      // Check if we recently incremented views for this post
+      const now = Date.now();
+      const lastIncrement = this.recentViewIncrements.get(postSlug);
       
-      if (resources.length === 0) {
+      if (lastIncrement && (now - lastIncrement) < this.viewIncrementCooldown) {
+        console.log(`View increment skipped for ${postSlug} - within cooldown period`);
+        // Return the current view count without incrementing
+        const post = await this.getPostBySlug(postSlug);
+        return post ? post.views || 0 : 0;
+      }
+      
+      // Find the post by slug instead of internal id
+      const post = await this.getPostBySlug(postSlug);
+      
+      if (!post) {
         throw new Error('Post not found for view increment');
       }
 
-      const post = resources[0];
       const newViews = (post.views || 0) + 1;
+      console.log(`Current views: ${post.views || 0}, incrementing to: ${newViews}`);
       
       // Update the post directly using Cosmos DB internal id and partition key
       const updatedPost = {
@@ -283,7 +304,19 @@ class CosmosDBService {
         updatedAt: new Date().toISOString()
       };
 
+      // Use the Cosmos DB internal id (from the document) and partition key
       await this.container.item(post.id, post.type).replace(updatedPost);
+      
+      // Track this increment
+      this.recentViewIncrements.set(postSlug, now);
+      
+      // Clean up old entries (older than cooldown period)
+      for (const [slug, timestamp] of this.recentViewIncrements.entries()) {
+        if (now - timestamp > this.viewIncrementCooldown) {
+          this.recentViewIncrements.delete(slug);
+        }
+      }
+      
       console.log(`Successfully incremented views to ${newViews} for post: ${post.title}`);
       
       return newViews;

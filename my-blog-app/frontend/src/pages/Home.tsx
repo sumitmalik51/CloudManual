@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
+import SEOHead from '../components/seo/SEOHead';
 import ErrorMessage from '../components/ui/ErrorMessage';
 import { blogAPI } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
@@ -61,7 +62,7 @@ const Home: React.FC = () => {
       const data = await blogAPI.getPosts({ 
         page, 
         limit: postsPerPage,
-        ...(category !== 'All' && { tag: category })
+        ...(category !== 'All' && { category: category })
       });
       
       if (page === 1) {
@@ -114,6 +115,13 @@ const Home: React.FC = () => {
 
   return (
     <Layout>
+      <SEOHead
+        title="CloudManual - Your Guide to Cloud Technologies"
+        description="Comprehensive guides, tutorials, and best practices for cloud computing, Azure, AWS, DevOps, and modern web development."
+        keywords={['cloud computing', 'Azure', 'AWS', 'DevOps', 'tutorials', 'web development', 'programming']}
+        url={window.location.href}
+        type="website"
+      />
       {/* Hero Section */}
       <section 
         className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-32 px-6 text-center overflow-hidden"

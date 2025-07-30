@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import AdminLayout from '../components/layout/AdminLayout';
+import ContentEditor from '../components/admin/ContentEditor';
 
 interface PostData {
   title: string;
@@ -9,6 +10,7 @@ interface PostData {
   author: string;
   status: 'published' | 'draft';
   tags: string[];
+  category: string;
   metaTitle: string;
   metaDescription: string;
   featuredImage: string;
@@ -26,6 +28,7 @@ const PostEditor: React.FC = () => {
     author: 'Admin',
     status: 'draft',
     tags: [],
+    category: '',
     metaTitle: '',
     metaDescription: '',
     featuredImage: '',
@@ -71,6 +74,7 @@ const PostEditor: React.FC = () => {
         author: post.author || 'Admin',
         status: post.status || 'draft',
         tags: post.tags || [],
+        category: post.category || '',
         metaTitle: post.metaTitle || '',
         metaDescription: post.metaDescription || '',
         featuredImage: post.featuredImage || '',
@@ -87,6 +91,13 @@ const PostEditor: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleContentChange = (content: string) => {
+    setFormData(prev => ({
+      ...prev,
+      content: content
     }));
   };
 
@@ -270,18 +281,15 @@ const PostEditor: React.FC = () => {
                 <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
                   Content *
                 </label>
-                <textarea
-                  id="content"
-                  name="content"
+                <ContentEditor
                   value={formData.content}
-                  onChange={handleInputChange}
-                  rows={20}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  onChange={handleContentChange}
                   placeholder="Write your post content here..."
-                  required
+                  height={500}
+                  mode="rich"
                 />
                 <p className="mt-1 text-sm text-gray-500">
-                  You can use Markdown formatting for rich text.
+                  Rich text editor with markdown support. Use the toolbar for formatting.
                 </p>
               </div>
 
@@ -330,6 +338,27 @@ const PostEditor: React.FC = () => {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Select a category</option>
+                  <option value="Cloud">Cloud</option>
+                  <option value="DevOps">DevOps</option>
+                  <option value="AI">AI</option>
+                  <option value="Security">Security</option>
+                  <option value="WebDev">WebDev</option>
+                </select>
               </div>
             </div>
           </div>

@@ -38,6 +38,7 @@ router.get('/', async (req, res) => {
       page = 1, 
       limit = 10, 
       tag, 
+      category,
       search,
       status = 'published'
     } = req.query;
@@ -50,7 +51,9 @@ router.get('/', async (req, res) => {
       offset: offset,
       sortBy: 'createdAt',
       sortOrder: 'desc',
-      search: search || null
+      search: search || null,
+      tag: tag || null,
+      category: category || null
     };
 
     const posts = await cosmosDB.getAllPosts(options);
@@ -521,9 +524,15 @@ router.get('/:slug', async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // For now, skip view incrementing to avoid Cosmos DB issues
-    // TODO: Fix view incrementing logic later
-    console.log(`Serving post: ${post.title} (slug: ${post.slug})`);
+    // Increment view count using slug
+    try {
+      const newViews = await cosmosDB.incrementViews(post.slug);
+      post.views = newViews;
+      console.log(`Successfully incremented views for post: ${post.title}`);
+    } catch (viewError) {
+      console.error('Error incrementing views, continuing without increment:', viewError.message);
+      // Continue serving the post even if view increment fails
+    }
 
     res.json(post);
   } catch (error) {

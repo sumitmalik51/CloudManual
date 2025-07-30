@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import SEOHead from '../components/seo/SEOHead';
 import ErrorMessage from '../components/ui/ErrorMessage';
@@ -264,69 +265,82 @@ const Home: React.FC = () => {
           <div className="absolute top-40 right-20 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
           <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl animate-pulse delay-2000"></div>
           
-          {/* Floating Tech Icons */}
-          <div className="absolute top-20 right-1/4 text-white/10 animate-float">
-            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24">
+          {/* Floating Tech Icons with enhanced animations */}
+          <div className="absolute top-20 right-1/4 text-white/10 animate-float-gentle">
+            <svg className="w-16 h-16 animate-rotate-in" fill="currentColor" viewBox="0 0 24 24" style={{ animationDelay: '0.5s' }}>
               <path d="M13.5 2c-5.621 0-10.211 4.443-10.475 10h-3.025l5 6.5 5-6.5h-3.053c.258-3.531 3.249-6.297 6.863-6.485v2.485l6.5-5-6.5-5v2.5zm-3 20c5.621 0 10.211-4.443 10.475-10h3.025l-5-6.5-5 6.5h3.053c-.258 3.531-3.249 6.297-6.863 6.485v-2.485l-6.5 5 6.5 5v-2.5z"/>
             </svg>
           </div>
           <div className="absolute bottom-32 right-16 text-white/10 animate-float-delayed">
-            <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-12 h-12 animate-slide-in-right" fill="currentColor" viewBox="0 0 24 24" style={{ animationDelay: '1s' }}>
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
           </div>
-          <div className="absolute top-1/3 left-16 text-white/10 animate-float">
-            <svg className="w-14 h-14" fill="currentColor" viewBox="0 0 24 24">
+          <div className="absolute top-1/3 left-16 text-white/10 animate-float-gentle">
+            <svg className="w-14 h-14 animate-slide-in-left" fill="currentColor" viewBox="0 0 24 24" style={{ animationDelay: '1.5s' }}>
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
+          </div>
+          
+          {/* Animated particles */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute w-1 h-1 bg-white/30 rounded-full animate-particle-float" style={{ left: '10%', animationDelay: '0s' }}></div>
+            <div className="absolute w-1 h-1 bg-blue-300/40 rounded-full animate-particle-float" style={{ left: '20%', animationDelay: '2s' }}></div>
+            <div className="absolute w-1 h-1 bg-purple-300/40 rounded-full animate-particle-float" style={{ left: '30%', animationDelay: '4s' }}></div>
+            <div className="absolute w-1 h-1 bg-cyan-300/40 rounded-full animate-particle-float" style={{ left: '70%', animationDelay: '1s' }}></div>
+            <div className="absolute w-1 h-1 bg-indigo-300/40 rounded-full animate-particle-float" style={{ left: '80%', animationDelay: '3s' }}></div>
+            <div className="absolute w-1 h-1 bg-pink-300/40 rounded-full animate-particle-float" style={{ left: '90%', animationDelay: '5s' }}></div>
           </div>
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto">
-          {/* AI-Powered Modern Title */}
+          {/* AI-Powered Modern Title with enhanced animations */}
           <div className="mb-8">
             {/* Main Title with AI Effects */}
             <div className="relative text-center">
+              {/* Background glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-cyan-400/20 rounded-full blur-3xl animate-enhanced-glow"></div>
+              
               {/* Main CloudManual Text */}
-              <h1 className="relative text-6xl md:text-8xl font-bold mb-6 tracking-tight leading-none">
+              <h1 className="relative text-6xl md:text-8xl font-bold mb-6 tracking-tight leading-none animate-fade-in-up">
                 <span className="ai-title-text">
                   CloudManual
                 </span>
               </h1>
               
-              {/* AI Subtitle */}
+              {/* AI Subtitle with typing effect */}
               <div className="text-center mb-6">
-                <p className="text-xl md:text-2xl text-cyan-100 font-light tracking-wide opacity-90">
+                <p className="text-xl md:text-2xl text-cyan-100 font-light tracking-wide opacity-90 animate-slide-in-left" style={{ animationDelay: '0.5s' }}>
                   Powered by AI • Guided by Experts • Built for the Future
                 </p>
               </div>
             </div>
             
-            {/* Live Badge - Clickable */}
-            <div className="flex justify-center mb-6">
+            {/* Live Badge - Clickable with enhanced animation */}
+            <div className="flex justify-center mb-6 animate-slide-in-right" style={{ animationDelay: '1s' }}>
               <Link 
                 to="/whats-new"
-                className="group flex items-center space-x-2 bg-green-500/20 backdrop-blur-sm rounded-full px-4 py-2 border border-green-400/30 hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 cursor-pointer"
+                className="group flex items-center space-x-2 bg-green-500/20 backdrop-blur-sm rounded-full px-4 py-2 border border-green-400/30 hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 cursor-pointer transform hover:scale-110 hover:rotate-1"
               >
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse group-hover:animate-bounce"></div>
                 <span className="text-sm font-semibold text-green-100 group-hover:text-white">Live & Updated Daily</span>
-                <svg className="w-4 h-4 text-green-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-green-300 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
             </div>
           </div>
 
-          <p className="text-xl md:text-3xl mb-12 max-w-4xl mx-auto font-light leading-relaxed drop-shadow-lg text-blue-100">
+          <p className="text-xl md:text-3xl mb-12 max-w-4xl mx-auto font-light leading-relaxed drop-shadow-lg text-blue-100 animate-fade-in-up" style={{ animationDelay: '1.5s' }}>
             Your modern guide to Cloud, AI, and DevOps — hands-on, simplified, and real-world focused.
           </p>
           
-          {/* Premium Search Bar with Autocomplete & Animations */}
-          <div className="max-w-3xl mx-auto mb-12 relative z-50">
-            <div className="relative group cursor-text" onClick={() => searchInputRef.current?.focus()}>
-              {/* Animated Background Glow */}
-              <div className={`absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-2xl blur-lg transition-all duration-700 ${
-                searchFocused ? 'opacity-80 scale-110 animate-pulse' : 'opacity-30 group-hover:opacity-60 group-hover:scale-105'
+          {/* Premium Search Bar with Autocomplete & Enhanced Animations */}
+          <div className="max-w-3xl mx-auto mb-12 relative z-50 animate-fade-in-up" style={{ animationDelay: '2s' }}>
+            <div className="relative group cursor-text transform hover:scale-105 transition-transform duration-500" onClick={() => searchInputRef.current?.focus()}>
+              {/* Enhanced Animated Background Glow */}
+              <div className={`absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-2xl blur-lg transition-all duration-700 animate-enhanced-glow ${
+                searchFocused ? 'opacity-80 scale-110' : 'opacity-30 group-hover:opacity-60 group-hover:scale-105'
               }`}></div>
               
               {/* Moving Border Animation */}
@@ -865,16 +879,34 @@ const Home: React.FC = () => {
             )}
 
             <div className={`grid gap-8 ${viewMode === 'grid' ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
-              {posts.slice(0, showAllPosts ? posts.length : maxHomePosts).map((post, i) => {
-                const readingTime = estimateReadingTime(post.content || post.excerpt || '');
-                
-                return (
-                  <div 
-                    key={post.id} 
-                    className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden group ${
-                      viewMode === 'list' ? 'md:flex md:h-64' : ''
-                    }`}
-                  >
+              <AnimatePresence mode="wait">
+                {posts.slice(0, showAllPosts ? posts.length : maxHomePosts).map((post, i) => {
+                  const readingTime = estimateReadingTime(post.content || post.excerpt || '');
+                  
+                  return (
+                    <motion.div 
+                      key={post.id}
+                      initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -50, scale: 0.9 }}
+                      transition={{ 
+                        duration: 0.5, 
+                        delay: i * 0.1,
+                        type: "spring",
+                        stiffness: 100,
+                        damping: 15
+                      }}
+                      whileHover={{ 
+                        y: -8, 
+                        scale: 1.02,
+                        rotateY: 5,
+                        transition: { duration: 0.3 }
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden group cursor-pointer ${
+                        viewMode === 'list' ? 'md:flex md:h-64' : ''
+                      }`}
+                    >
                     {/* Post Image */}
                     <div className={`relative overflow-hidden ${viewMode === 'list' ? 'md:w-1/3' : ''}`}>
                       <img 
@@ -979,33 +1011,40 @@ const Home: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
+              </AnimatePresence>
 
-              {/* Enhanced Loading Skeletons */}
+              {/* Enhanced Loading Skeletons with sophisticated animations */}
               {loading && [...Array(viewMode === 'grid' ? 4 : 2)].map((_, i) => (
-                <div key={i} className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden ${
-                  viewMode === 'list' ? 'md:flex md:h-64' : ''
-                }`}>
+                <motion.div 
+                  key={`skeleton-${i}`}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: i * 0.1 }}
+                  className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden ${
+                    viewMode === 'list' ? 'md:flex md:h-64' : ''
+                  }`}
+                >
                   <div className="animate-pulse">
-                    <div className={`bg-gray-200 dark:bg-gray-700 ${
+                    <div className={`bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-[shimmer_2s_infinite] ${
                       viewMode === 'list' ? 'md:w-1/3 h-full md:h-64' : 'h-48'
                     }`}></div>
                     <div className="p-6 space-y-4">
-                      <div className="bg-gray-200 dark:bg-gray-700 h-4 rounded w-3/4"></div>
-                      <div className="bg-gray-200 dark:bg-gray-700 h-4 rounded w-1/2"></div>
-                      <div className="bg-gray-200 dark:bg-gray-700 h-3 rounded w-2/3"></div>
+                      <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-4 rounded w-3/4 animate-[shimmer_2s_infinite_0.5s]"></div>
+                      <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-4 rounded w-1/2 animate-[shimmer_2s_infinite_1s]"></div>
+                      <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-3 rounded w-2/3 animate-[shimmer_2s_infinite_1.5s]"></div>
                       <div className="flex justify-between items-center">
                         <div className="flex items-center space-x-2">
-                          <div className="bg-gray-200 dark:bg-gray-700 w-8 h-8 rounded-full"></div>
-                          <div className="bg-gray-200 dark:bg-gray-700 h-3 rounded w-16"></div>
+                          <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 w-8 h-8 rounded-full animate-[shimmer_2s_infinite_2s]"></div>
+                          <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-3 rounded w-16 animate-[shimmer_2s_infinite_2.5s]"></div>
                         </div>
-                        <div className="bg-gray-200 dark:bg-gray-700 h-3 rounded w-12"></div>
+                        <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-3 rounded w-12 animate-[shimmer_2s_infinite_3s]"></div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
 

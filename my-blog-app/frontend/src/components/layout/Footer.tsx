@@ -179,7 +179,7 @@ const Footer: React.FC = () => {
                 Terms of Service
               </Link>
               <a 
-                href="mailto:contact@cloudmanual.com" 
+                href="mailto:sumitmalik51@gmail.com" 
                 className="text-gray-300 hover:text-white text-sm transition-all duration-300 hover:translate-y-[-1px]"
               >
                 Contact Us

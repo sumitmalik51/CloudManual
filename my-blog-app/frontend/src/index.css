@@ -408,10 +408,6 @@ body.dark {
   animation: float-gentle 4s ease-in-out infinite;
 }
 
-.animate-float-delayed {
-  animation: float-delayed 5s ease-in-out infinite;
-}
-
 .animate-particle-float {
   animation: particle-float 15s linear infinite;
 }
@@ -529,22 +525,8 @@ body.dark {
   animation: pulseGlow 2s ease-in-out infinite;
 }
 
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  background-size: 1000px 100%;
-  animation: shimmer 2s infinite;
-}
-
 .animate-typewriter {
   animation: typewriter 4s steps(40) infinite;
-}
-
-.animate-float-delayed {
-  animation: float-delayed 4s ease-in-out infinite;
-}
-
-.animate-bounce-subtle {
-  animation: bounce-subtle 3s ease-in-out infinite;
 }
 
 .animate-neural-pulse {

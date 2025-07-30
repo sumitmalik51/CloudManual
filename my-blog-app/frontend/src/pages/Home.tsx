@@ -9,6 +9,18 @@ import PageTransition from '../components/ui/PageTransition';
 import { blogAPI } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
 
+// Sample search suggestions (moved outside component to avoid recreation)
+const POPULAR_SEARCHES = [
+  'GitHub Copilot tutorial',
+  'Azure container apps',
+  'Docker best practices',
+  'Kubernetes deployment',
+  'AI model implementation',
+  'DevOps automation',
+  'TypeScript performance',
+  'Cloud architecture patterns'
+];
+
 const Home: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [allPosts, setAllPosts] = useState<any[]>([]);
@@ -98,18 +110,6 @@ const Home: React.FC = () => {
     return Math.ceil(words / wordsPerMinute);
   };
 
-  // Sample search suggestions (in real app, this would come from API)
-  const popularSearches = [
-    'GitHub Copilot tutorial',
-    'Azure container apps',
-    'Docker best practices',
-    'Kubernetes deployment',
-    'AI model implementation',
-    'DevOps automation',
-    'TypeScript performance',
-    'Cloud architecture patterns'
-  ];
-
   // Enhanced debounced search function with suggestions
   const debouncedSearch = useCallback((query: string) => {
     if (searchTimeoutRef.current) {
@@ -118,7 +118,7 @@ const Home: React.FC = () => {
     
     // Update suggestions
     if (query.length > 0) {
-      const suggestions = popularSearches.filter(search => 
+      const suggestions = POPULAR_SEARCHES.filter((search: string) => 
         search.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5);
       setSearchSuggestions(suggestions);
@@ -138,7 +138,7 @@ const Home: React.FC = () => {
       setPosts(filtered);
       setIsSearching(false);
     }, 300);
-  }, [allPosts, popularSearches]);
+  }, [allPosts]);
 
   const handleSuggestionClick = (suggestion: string) => {
     setSearchQuery(suggestion);
@@ -319,7 +319,7 @@ const Home: React.FC = () => {
             {/* Live Badge - Clickable with enhanced animation */}
             <div className="flex justify-center mb-6 animate-slide-in-right" style={{ animationDelay: '1s' }}>
               <Link 
-                to="/whats-new"
+                to="/blog"
                 className="group flex items-center space-x-2 bg-green-500/20 backdrop-blur-sm rounded-full px-4 py-2 border border-green-400/30 hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 cursor-pointer transform hover:scale-110 hover:rotate-1"
               >
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse group-hover:animate-bounce"></div>

@@ -2,6 +2,193 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+/* Import Orbitron font for futuristic AI look */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+/* AI Title Styling */
+.ai-title-text {
+  font-family: 'Orbitron', 'Poppins', sans-serif;
+  font-weight: 700;
+  background: linear-gradient(
+    45deg, 
+    #00FFFF 0%, 
+    #4A90E2 25%, 
+    #8A2BE2 50%, 
+    #E74C3C 75%, 
+    #00FFFF 100%
+  );
+  background-size: 300% 300%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+  display: inline-block;
+  
+  /* Neon glow effect with layered text-shadow */
+  text-shadow: 
+    0 0 5px rgba(0, 255, 255, 0.3),
+    0 0 10px rgba(74, 144, 226, 0.2),
+    0 0 15px rgba(138, 43, 226, 0.2),
+    0 0 20px rgba(231, 76, 60, 0.1),
+    0 0 35px rgba(0, 255, 255, 0.1);
+  
+  /* Slow color animation */
+  animation: ai-color-flow 8s ease-in-out infinite, ai-gentle-float 6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Slow color flow animation */
+@keyframes ai-color-flow {
+  0% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+  25% {
+    background-position: 100% 50%;
+    filter: hue-rotate(90deg);
+  }
+  50% {
+    background-position: 100% 100%;
+    filter: hue-rotate(180deg);
+  }
+  75% {
+    background-position: 0% 100%;
+    filter: hue-rotate(270deg);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* Gentle floating animation */
+@keyframes ai-gentle-float {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  33% {
+    transform: translateY(-5px) scale(1.01);
+  }
+  66% {
+    transform: translateY(3px) scale(0.99);
+  }
+}
+
+/* Enhanced shimmer with moving highlight */
+.ai-title-text::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    rgba(0, 255, 255, 0.1),
+    transparent
+  );
+  animation: shimmer-sweep 4s ease-in-out infinite;
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+/* Subtle breathing effect */
+.ai-title-text::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 255, 255, 0.05) 0%,
+    rgba(138, 43, 226, 0.03) 50%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  animation: ai-breathe 5s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes ai-breathe {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.6;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ai-title-text {
+    text-shadow: 
+      0 0 3px rgba(0, 255, 255, 0.3),
+      0 0 6px rgba(74, 144, 226, 0.2),
+      0 0 9px rgba(138, 43, 226, 0.2);
+    
+    /* Slower animations on mobile for better performance */
+    animation: ai-color-flow 10s ease-in-out infinite, ai-gentle-float 8s ease-in-out infinite;
+  }
+  
+  .ai-title-text::before {
+    animation: shimmer-sweep 5s ease-in-out infinite;
+  }
+  
+  .ai-title-text::after {
+    animation: ai-breathe 7s ease-in-out infinite;
+  }
+}
+
+/* Dark mode compatibility */
+.dark .ai-title-text {
+  text-shadow: 
+    0 0 8px rgba(0, 255, 255, 0.4),
+    0 0 15px rgba(74, 144, 226, 0.3),
+    0 0 20px rgba(138, 43, 226, 0.3),
+    0 0 25px rgba(231, 76, 60, 0.2),
+    0 0 40px rgba(0, 255, 255, 0.2);
+}
+
+.dark .ai-title-text::after {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 255, 255, 0.08) 0%,
+    rgba(138, 43, 226, 0.05) 50%,
+    transparent 70%
+  );
+}
+
+/* Performance optimization */
+@media (prefers-reduced-motion: reduce) {
+  .ai-title-text {
+    animation: none;
+  }
+  
+  .ai-title-text::before,
+  .ai-title-text::after {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
 /* Basic reset and global styles */
 * {
   margin: 0;
@@ -105,6 +292,46 @@ body.dark {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
   background-size: 1000px 100%;
   animation: shimmer 2s infinite;
+}
+
+.animate-typewriter {
+  animation: typewriter 4s steps(40) infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 4s ease-in-out infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 3s ease-in-out infinite;
+}
+
+.animate-neural-pulse {
+  animation: neural-pulse 2s ease-in-out infinite;
+}
+
+.animate-glitch {
+  animation: glitch 0.3s infinite;
+}
+
+.animate-matrix-rain {
+  animation: matrix-rain 3s linear infinite;
+}
+
+.animate-hologram {
+  animation: hologram 6s ease-in-out infinite;
+}
+
+/* AI-themed utility classes */
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.5), 0 0 20px rgba(34, 211, 238, 0.3), 0 0 30px rgba(34, 211, 238, 0.1);
+}
+
+.bg-neural-grid {
+  background-image: 
+    linear-gradient(rgba(34, 211, 238, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 /* Focus ring improvements */
@@ -211,6 +438,72 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes float-delayed {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(180deg); }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { 
+    transform: translateY(0px) scale(1);
+    text-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+  }
+  50% { 
+    transform: translateY(-8px) scale(1.05);
+    text-shadow: 0 0 30px rgba(34, 211, 238, 0.8);
+  }
+}
+
+@keyframes neural-pulse {
+  0%, 100% { 
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes glitch {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+@keyframes matrix-rain {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes hologram {
+  0%, 100% { 
+    opacity: 0.8;
+    filter: hue-rotate(0deg);
+  }
+  25% { 
+    opacity: 1;
+    filter: hue-rotate(90deg);
+  }
+  50% { 
+    opacity: 0.9;
+    filter: hue-rotate(180deg);
+  }
+  75% { 
+    opacity: 1;
+    filter: hue-rotate(270deg);
+  }
 }
 
 .animate-shimmer {

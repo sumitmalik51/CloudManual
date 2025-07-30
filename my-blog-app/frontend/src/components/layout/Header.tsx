@@ -3,28 +3,21 @@ import { Link, useLocation } from 'react-router-dom';
 import DarkModeToggle from '../ui/DarkModeToggle';
 
 const Header: React.FC = () => {
-  const [isScrolling, setIsScrolling] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
-    let scrollTimeout: NodeJS.Timeout;
-
     const handleScroll = () => {
-      setIsScrolling(true);
-      
-      // Clear existing timeout
-      clearTimeout(scrollTimeout);
-      
-      // Set navbar back to solid after scrolling stops
-      scrollTimeout = setTimeout(() => {
-        setIsScrolling(false);
-      }, 150);
+      const scrollPosition = window.scrollY;
+      setIsAtTop(scrollPosition < 10);
     };
+
+    // Initial check
+    handleScroll();
 
     window.addEventListener('scroll', handleScroll);
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
     };
   }, []);
 
@@ -37,8 +30,8 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolling 
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        isAtTop 
           ? 'bg-transparent backdrop-blur-none' 
           : 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-2xl shadow-blue-500/10'
       }`}>
@@ -57,14 +50,14 @@ const Header: React.FC = () => {
                 </div>
                 <div className="flex flex-col">
                   <span className={`text-2xl font-black transition-all duration-500 tracking-tight ${
-                    isScrolling 
+                    isAtTop 
                       ? 'text-white dark:text-white group-hover:text-blue-200 drop-shadow-lg' 
                       : 'text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400'
                   }`}>
                     CloudManual
                   </span>
                   <span className={`text-xs font-medium tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-1 group-hover:translate-y-0 ${
-                    isScrolling 
+                    isAtTop 
                       ? 'text-white/80 dark:text-white/80 drop-shadow-md' 
                       : 'text-gray-500 dark:text-gray-400'
                   }`}>
@@ -82,7 +75,7 @@ const Header: React.FC = () => {
                   className={`group relative px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
                     isActiveLink('/') 
                       ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/25' 
-                      : isScrolling
+                      : isAtTop
                         ? 'text-white dark:text-white hover:text-blue-200 dark:hover:text-blue-200 hover:bg-white/10 dark:hover:bg-white/10 drop-shadow-md'
                         : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
@@ -90,7 +83,7 @@ const Header: React.FC = () => {
                   <span className="relative z-10">Home</span>
                   {!isActiveLink('/') && (
                     <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                      isScrolling 
+                      isAtTop 
                         ? 'bg-white/20'
                         : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10'
                     }`}></div>
@@ -101,7 +94,7 @@ const Header: React.FC = () => {
                   className={`group relative px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
                     isActiveLink('/blog') 
                       ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/25' 
-                      : isScrolling
+                      : isAtTop
                         ? 'text-white dark:text-white hover:text-blue-200 dark:hover:text-blue-200 hover:bg-white/10 dark:hover:bg-white/10 drop-shadow-md'
                         : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
@@ -109,7 +102,7 @@ const Header: React.FC = () => {
                   <span className="relative z-10">Posts</span>
                   {!isActiveLink('/blog') && (
                     <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                      isScrolling 
+                      isAtTop 
                         ? 'bg-white/20'
                         : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10'
                     }`}></div>
@@ -120,7 +113,7 @@ const Header: React.FC = () => {
                   className={`group relative px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
                     isActiveLink('/about') 
                       ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/25' 
-                      : isScrolling
+                      : isAtTop
                         ? 'text-white dark:text-white hover:text-blue-200 dark:hover:text-blue-200 hover:bg-white/10 dark:hover:bg-white/10 drop-shadow-md'
                         : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
@@ -128,7 +121,7 @@ const Header: React.FC = () => {
                   <span className="relative z-10">About</span>
                   {!isActiveLink('/about') && (
                     <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                      isScrolling 
+                      isAtTop 
                         ? 'bg-white/20'
                         : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10'
                     }`}></div>
@@ -139,7 +132,7 @@ const Header: React.FC = () => {
                   className={`group relative px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
                     isActiveLink('/contact') 
                       ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/25' 
-                      : isScrolling
+                      : isAtTop
                         ? 'text-white dark:text-white hover:text-blue-200 dark:hover:text-blue-200 hover:bg-white/10 dark:hover:bg-white/10 drop-shadow-md'
                         : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
@@ -147,7 +140,7 @@ const Header: React.FC = () => {
                   <span className="relative z-10">Contact</span>
                   {!isActiveLink('/contact') && (
                     <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                      isScrolling 
+                      isAtTop 
                         ? 'bg-white/20'
                         : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10'
                     }`}></div>

@@ -283,13 +283,24 @@ const Home: React.FC = () => {
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto">
-          {/* Enhanced Title with Better Typography */}
+          {/* AI-Powered Modern Title */}
           <div className="mb-8">
-            <h1 className="text-6xl md:text-8xl font-black mb-6 tracking-tight leading-none">
-              <span className="block text-white drop-shadow-2xl">
-                CloudManual
-              </span>
-            </h1>
+            {/* Main Title with AI Effects */}
+            <div className="relative text-center">
+              {/* Main CloudManual Text */}
+              <h1 className="relative text-6xl md:text-8xl font-bold mb-6 tracking-tight leading-none">
+                <span className="ai-title-text">
+                  CloudManual
+                </span>
+              </h1>
+              
+              {/* AI Subtitle */}
+              <div className="text-center mb-6">
+                <p className="text-xl md:text-2xl text-cyan-100 font-light tracking-wide opacity-90">
+                  Powered by AI • Guided by Experts • Built for the Future
+                </p>
+              </div>
+            </div>
             
             {/* Live Badge - Clickable */}
             <div className="flex justify-center mb-6">

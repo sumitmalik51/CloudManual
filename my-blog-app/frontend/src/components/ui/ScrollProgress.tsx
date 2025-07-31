@@ -136,7 +136,7 @@ const ScrollProgress: React.FC<ScrollProgressProps> = ({
 };
 
 // Throttle function for performance
-function throttle<T extends (...args: any[]) => any>(
+function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): (...args: Parameters<T>) => void {

@@ -10,6 +10,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminPosts from './pages/AdminPosts';
 import PostEditor from './pages/PostEditor';
 import AdminAnalytics from './pages/AdminAnalytics';
+import './utils/dev-helpers'; // Load development helpers (for admin auth bypass in dev)
 import './App.css';
 
 function AnimatedRoutes() {

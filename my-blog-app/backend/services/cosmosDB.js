@@ -111,15 +111,43 @@ class CosmosDBService {
   async getPostBySlug(slug) {
     try {
       const querySpec = {
-        query: 'SELECT * FROM c WHERE c.slug = @slug AND c.type = @type',
+        query: 'SELECT * FROM c WHERE c.slug = @slug AND c.type = @type ORDER BY c.createdAt DESC',
         parameters: [
           { name: '@slug', value: slug },
           { name: '@type', value: 'post' }
         ]
       };
 
+      console.log(`Executing query: ${querySpec.query}`);
+      console.log('With parameters:', querySpec.parameters);
+
       const { resources } = await this.container.items.query(querySpec).fetchAll();
-      return resources.length > 0 ? resources[0] : null;
+      console.log('Query response:', { resourceCount: resources.length });
+      
+      if (resources.length > 0) {
+        // If multiple documents exist with same slug, take the most recent one
+        const post = resources[0];
+        console.log(`Found post by slug '${slug}':`, {
+          id: post.id,
+          slug: post.slug,
+          type: post.type,
+          title: post.title,
+          views: post.views,
+          likes: post.likes,
+          createdAt: post.createdAt
+        });
+        
+        // Warn if there are duplicates
+        if (resources.length > 1) {
+          console.warn(`⚠️  Found ${resources.length} documents with slug '${slug}'. Using most recent one.`);
+          console.warn('Duplicate IDs:', resources.map(r => ({ id: r.id, createdAt: r.createdAt })));
+        }
+        
+        return post;
+      } else {
+        console.log(`No post found with slug: ${slug}`);
+        return null;
+      }
     } catch (error) {
       console.error('Error getting post by slug:', error);
       throw error;
@@ -319,31 +347,117 @@ class CosmosDBService {
       const post = await this.getPostBySlug(postSlug);
       
       if (!post) {
-        throw new Error('Post not found for like increment');
+        console.log(`Post with slug ${postSlug} not found for like increment`);
+        return 0; // Return 0 instead of throwing error
       }
+
+      // Debug the post details
+      await this.debugPost(post);
 
       const newLikes = (post.likes || 0) + 1;
       console.log(`Current likes: ${post.likes || 0}, incrementing to: ${newLikes}`);
       
-      // Update the post directly using Cosmos DB internal id and partition key
-      const updatedPost = {
-        ...post,
-        likes: newLikes,
-        updatedAt: new Date().toISOString()
-      };
+      try {
+        // Verify the document exists before attempting update
+        console.log(`Verifying document exists before like update: ${post.id}`);
+        const { resource: existingDoc } = await this.container.item(post.id).read();
+        
+        if (!existingDoc) {
+          console.error(`Document verification failed - document ${post.id} does not exist`);
+          return post.likes || 0; // Return current like count without incrementing
+        }
+        
+        console.log(`Document verification successful - proceeding with like update`);
+        
+        // Update the post directly using Cosmos DB internal id and partition key
+        const updatedPost = {
+          ...existingDoc, // Use the verified existing document as base
+          likes: newLikes,
+          updatedAt: new Date().toISOString()
+        };
 
-      // Use the Cosmos DB internal id (from the document) and partition key
-      await this.container.item(post.id, post.type).replace(updatedPost);
+        // Try update without partition key first (since direct read works without it)
+        let response;
+        try {
+          response = await this.container.item(post.id).replace(updatedPost);
+        } catch (noPartitionError) {
+          console.log('Like update without partition key failed, trying with partition key...');
+          response = await this.container.item(post.id, post.type).replace(updatedPost);
+        }
+        
+        // Track this increment
+        this.recentLikeIncrements.set(postSlug, now);
+        
+        console.log(`Successfully incremented likes to ${newLikes} for post: ${post.title}`);
+        return newLikes;
+        
+      } catch (replaceError) {
+        console.error(`Failed to update likes for document with id: ${post.id}, partition key: ${post.type}`);
+        console.error('Document details:', {
+          id: post.id,
+          slug: post.slug,
+          type: post.type,
+          title: post.title
+        });
+        
+        // Check if document exists by trying to read it directly
+        try {
+          const existingDoc = await this.container.item(post.id, post.type).read();
+          console.log('Document exists for likes, but replace failed. This might be a concurrency issue.');
+        } catch (readError) {
+          console.error('Document not found in CosmosDB for like increment:', postSlug);
+          // Document doesn't exist, return current like count without incrementing
+          return post.likes || 0;
+        }
+        
+        // Re-throw the original replace error
+        throw replaceError;
+      }
       
-      // Track this increment
-      this.recentLikeIncrements.set(postSlug, now);
-      
-      console.log(`Successfully incremented likes to ${newLikes} for post: ${post.title}`);
-      
-      return newLikes;
     } catch (error) {
       console.error('Error incrementing likes:', error);
-      throw error;
+      // For increment failures, return current like count instead of throwing
+      try {
+        const post = await this.getPostBySlug(postSlug);
+        return post ? post.likes || 0 : 0;
+      } catch (getError) {
+        console.error('Failed to retrieve post for fallback like count:', getError);
+        return 0;
+      }
+    }
+  }
+
+  async debugPost(post) {
+    console.log('=== DEBUG POST DETAILS ===');
+    console.log('Full post object keys:', Object.keys(post));
+    console.log('Document ID:', post.id);
+    console.log('Document _rid:', post._rid);
+    console.log('Document _self:', post._self);
+    console.log('Document _etag:', post._etag);
+    console.log('Document _attachments:', post._attachments);
+    console.log('Document _ts:', post._ts);
+    console.log('==============================');
+    
+    // Try to read directly by ID
+    try {
+      const { resource: directRead } = await this.container.item(post.id).read();
+      console.log('Direct read successful:', directRead ? 'YES' : 'NO');
+      if (directRead) {
+        console.log('Direct read ID:', directRead.id);
+      }
+    } catch (error) {
+      console.log('Direct read failed:', error.message);
+    }
+    
+    // Try to read with partition key
+    try {
+      const { resource: partitionRead } = await this.container.item(post.id, post.type).read();
+      console.log('Partition key read successful:', partitionRead ? 'YES' : 'NO');
+      if (partitionRead) {
+        console.log('Partition read ID:', partitionRead.id);
+      }
+    } catch (error) {
+      console.log('Partition key read failed:', error.message);
     }
   }
 
@@ -370,48 +484,87 @@ class CosmosDBService {
         return 0; // Return 0 instead of throwing error
       }
 
+      // Debug the post details
+      await this.debugPost(post);
+
       const newViews = (post.views || 0) + 1;
       console.log(`Current views: ${post.views || 0}, incrementing to: ${newViews}`);
       
-      // Update the post directly using Cosmos DB internal id and partition key
-      const updatedPost = {
-        ...post,
-        views: newViews,
-        updatedAt: new Date().toISOString()
-      };
-
-      // Use the Cosmos DB internal id (from the document) and partition key
-      await this.container.item(post.id, post.type).replace(updatedPost);
-      
-      // Track this increment
-      this.recentViewIncrements.set(postSlug, now);
-      
-      // Clean up old entries (older than cooldown period)
-      for (const [slug, timestamp] of this.recentViewIncrements.entries()) {
-        if (now - timestamp > this.viewIncrementCooldown) {
-          this.recentViewIncrements.delete(slug);
+      try {
+        // Verify the document exists before attempting update
+        console.log(`Verifying document exists before update: ${post.id}`);
+        const { resource: existingDoc } = await this.container.item(post.id).read();
+        
+        if (!existingDoc) {
+          console.error(`Document verification failed - document ${post.id} does not exist`);
+          return post.views || 0; // Return current view count without incrementing
         }
+        
+        console.log(`Document verification successful - proceeding with update`);
+        
+        // Update the post directly using Cosmos DB internal id and partition key
+        const updatedPost = {
+          ...existingDoc, // Use the verified existing document as base
+          views: newViews,
+          updatedAt: new Date().toISOString()
+        };
+
+        // Try update without partition key first (since direct read works without it)
+        let response;
+        try {
+          response = await this.container.item(post.id).replace(updatedPost);
+        } catch (noPartitionError) {
+          console.log('Update without partition key failed, trying with partition key...');
+          response = await this.container.item(post.id, post.type).replace(updatedPost);
+        }
+        
+        // Track this increment
+        this.recentViewIncrements.set(postSlug, now);
+        
+        // Clean up old entries (older than cooldown period)
+        for (const [slug, timestamp] of this.recentViewIncrements.entries()) {
+          if (now - timestamp > this.viewIncrementCooldown) {
+            this.recentViewIncrements.delete(slug);
+          }
+        }
+        
+        console.log(`Successfully incremented views to ${newViews} for post: ${post.title}`);
+        return newViews;
+        
+      } catch (replaceError) {
+        console.error(`Failed to update document with id: ${post.id}, partition key: ${post.type}`);
+        console.error('Document details:', {
+          id: post.id,
+          slug: post.slug,
+          type: post.type,
+          title: post.title
+        });
+        
+        // Check if document exists by trying to read it directly
+        try {
+          const existingDoc = await this.container.item(post.id, post.type).read();
+          console.log('Document exists, but replace failed. This might be a concurrency issue.');
+          console.log('Existing document ID:', existingDoc.resource?.id);
+        } catch (readError) {
+          console.error('Document not found in CosmosDB, returning 0 views for', postSlug);
+          // Document doesn't exist, return current view count without incrementing
+          return post.views || 0;
+        }
+        
+        // Re-throw the original replace error
+        throw replaceError;
       }
       
-      console.log(`Successfully incremented views to ${newViews} for post: ${post.title}`);
-      
-      return newViews;
     } catch (error) {
       console.error('Error incrementing views:', error);
-      
-      // If it's a CosmosDB "not found" error, return the current views or 0
-      if (error.code === 404 || error.message.includes('does not exist')) {
-        console.log(`Post document not found in CosmosDB, returning 0 views for ${postSlug}`);
-        return 0;
-      }
-      
-      // For other errors, still try to return the current view count if possible
+      // For increment failures, return current view count instead of throwing
       try {
         const post = await this.getPostBySlug(postSlug);
+        console.log(`Post document not found in CosmosDB, returning 0 views for ${postSlug}`);
         return post ? post.views || 0 : 0;
-      } catch (fallbackError) {
-        console.error('Fallback view count retrieval failed:', fallbackError);
-        return 0; // Return 0 as last resort instead of throwing
+      } catch (getError) {
+        console.error('Failed to retrieve post for fallback view count:', getError);
+        return 0;
       }
     }
   }
@@ -427,6 +580,83 @@ class CosmosDBService {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim('-');
+  }
+
+  // Utility method to find and remove duplicate posts by slug
+  async findDuplicatePosts() {
+    try {
+      console.log('🔍 Scanning for duplicate posts...');
+      
+      const querySpec = {
+        query: 'SELECT c.slug, COUNT(1) as count FROM c WHERE c.type = @type GROUP BY c.slug HAVING COUNT(1) > 1',
+        parameters: [{ name: '@type', value: 'post' }]
+      };
+
+      const { resources: duplicates } = await this.container.items.query(querySpec).fetchAll();
+      
+      if (duplicates.length > 0) {
+        console.log(`⚠️  Found ${duplicates.length} slugs with duplicates:`);
+        for (const dup of duplicates) {
+          console.log(`  - ${dup.slug}: ${dup.count} copies`);
+        }
+        return duplicates;
+      } else {
+        console.log('✅ No duplicate posts found');
+        return [];
+      }
+    } catch (error) {
+      console.error('Error scanning for duplicates:', error);
+      throw error;
+    }
+  }
+
+  // Utility method to clean up duplicates (keeps the most recent one)
+  async cleanupDuplicatePosts() {
+    try {
+      const duplicates = await this.findDuplicatePosts();
+      
+      if (duplicates.length === 0) {
+        return { cleaned: 0, message: 'No duplicates found' };
+      }
+
+      let totalCleaned = 0;
+      
+      for (const duplicate of duplicates) {
+        console.log(`🧹 Cleaning duplicates for slug: ${duplicate.slug}`);
+        
+        // Get all posts with this slug, ordered by creation date (newest first)
+        const querySpec = {
+          query: 'SELECT * FROM c WHERE c.slug = @slug AND c.type = @type ORDER BY c.createdAt DESC',
+          parameters: [
+            { name: '@slug', value: duplicate.slug },
+            { name: '@type', value: 'post' }
+          ]
+        };
+
+        const { resources: posts } = await this.container.items.query(querySpec).fetchAll();
+        
+        if (posts.length > 1) {
+          // Keep the first one (most recent), delete the rest
+          const postsToDelete = posts.slice(1);
+          
+          console.log(`  Keeping: ${posts[0].id} (${posts[0].createdAt})`);
+          
+          for (const postToDelete of postsToDelete) {
+            console.log(`  Deleting: ${postToDelete.id} (${postToDelete.createdAt})`);
+            await this.container.item(postToDelete.id, postToDelete.type).delete();
+            totalCleaned++;
+          }
+        }
+      }
+
+      const message = `✅ Cleanup complete! Removed ${totalCleaned} duplicate posts`;
+      console.log(message);
+      return { cleaned: totalCleaned, message };
+      
+    } catch (error) {
+      console.error('Error during duplicate cleanup:', error);
+      throw error;
+    }
   }
 }
 

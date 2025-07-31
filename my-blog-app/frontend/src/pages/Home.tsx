@@ -8,8 +8,8 @@ import TopicsModal from '../components/ui/TopicsModal';
 import PageTransition from '../components/ui/PageTransition';
 import LazyImage from '../components/ui/LazyImage';
 import OptimizedBlogGrid from '../components/ui/OptimizedBlogGrid';
-import SmoothLoading from '../components/ui/SmoothLoading';
 import { blogAPI } from '../utils/api';
+import type { Post } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
 
 // Sample search suggestions (moved outside component to avoid recreation)
@@ -25,8 +25,8 @@ const POPULAR_SEARCHES = [
 ];
 
 const Home: React.FC = () => {
-  const [posts, setPosts] = useState<any[]>([]);
-  const [allPosts, setAllPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('All');
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ const Home: React.FC = () => {
 
   // Featured posts rotation state
   const [currentFeaturedIndex, setCurrentFeaturedIndex] = useState(0);
-  const [featuredPosts, setFeaturedPosts] = useState<any[]>([]);
+  const [featuredPosts, setFeaturedPosts] = useState<Post[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const featuredRotationRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -96,8 +96,19 @@ const Home: React.FC = () => {
   // Dark mode state - you can connect this to a context or localStorage
   const [isDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('darkMode') === 'true' || 
-             (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const storedMode = localStorage.getItem('darkMode');
+      if (storedMode !== null) {
+        return storedMode === 'true';
+      }
+      // Fallback for system preference
+      if (window.matchMedia && typeof window.matchMedia === 'function') {
+        try {
+          return window.matchMedia('(prefers-color-scheme: dark)').matches;
+        } catch (error) {
+          console.warn('Error accessing matchMedia:', error);
+          return false;
+        }
+      }
     }
     return false;
   });
@@ -113,11 +124,7 @@ const Home: React.FC = () => {
   }, [isDarkMode]);
 
   // Utility function to estimate reading time
-  const estimateReadingTime = (content: string) => {
-    const wordsPerMinute = 200;
-    const words = content.split(' ').length;
-    return Math.ceil(words / wordsPerMinute);
-  };
+
 
   // Enhanced debounced search function with suggestions
   const debouncedSearch = useCallback((query: string) => {
@@ -161,6 +168,12 @@ const Home: React.FC = () => {
     }
   }, [debouncedSearch]);
 
+  const handleSuggestionClick = useCallback((suggestion: string) => {
+    setSearchQuery(suggestion);
+    debouncedSearch(suggestion);
+    setShowSuggestions(false);
+  }, [debouncedSearch]);
+
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsletterEmail.trim()) return;
@@ -180,6 +193,8 @@ const Home: React.FC = () => {
       setTimeout(() => setNewsletterStatus('idle'), 3000);
     }
   };
+
+  const categories = useMemo(() => ['All', 'Cloud', 'DevOps', 'AI', 'Security', 'WebDev'], []);
 
   // Enhanced fetch function
   const fetchPosts = useCallback(async () => {
@@ -210,7 +225,7 @@ const Home: React.FC = () => {
       setError(getErrorMessage(err));
       setLoading(false);
     }
-  }, [category, showAllPosts, maxHomePosts]);
+  }, [category, showAllPosts, maxHomePosts, categories.length]);
 
   useEffect(() => {
     fetchPosts();
@@ -241,8 +256,6 @@ const Home: React.FC = () => {
       }
     };
   }, []);
-
-  const categories = useMemo(() => ['All', 'Cloud', 'DevOps', 'AI', 'Security', 'WebDev'], []);
 
   const handleCategoryChange = useCallback((newCategory: string) => {
     setCategory(newCategory);
@@ -301,7 +314,7 @@ const Home: React.FC = () => {
     const tagCount = new Map<string, number>();
     
     allPosts.forEach(post => {
-      post.tags?.forEach(tag => {
+      post.tags?.forEach((tag: string) => {
         tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
       });
     });
@@ -695,7 +708,7 @@ const Home: React.FC = () => {
                 ].map(sort => (
                   <button
                     key={sort.key}
-                    onClick={() => setSortBy(sort.key as any)}
+                    onClick={() => setSortBy(sort.key as 'latest' | 'popular' | 'trending')}
                     className={`flex items-center space-x-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       sortBy === sort.key
                         ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'

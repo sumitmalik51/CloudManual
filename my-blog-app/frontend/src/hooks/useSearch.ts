@@ -1,11 +1,18 @@
 import { useState, useRef, useCallback } from 'react';
 
+interface BlogPost {
+  id: string;
+  title: string;
+  tags: string[];
+  excerpt: string;
+}
+
 interface UseSearchOptions {
-  allPosts: any[];
+  allPosts: BlogPost[];
   popularSearches: string[];
 }
 
-export const useSearch = ({ allPosts, popularSearches }: UseSearchOptions) => {
+export const useSearch = ({ popularSearches }: Omit<UseSearchOptions, 'allPosts'>) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -34,7 +41,7 @@ export const useSearch = ({ allPosts, popularSearches }: UseSearchOptions) => {
       // Filter posts logic would be handled in the parent component
       setIsSearching(false);
     }, 300);
-  }, [allPosts, popularSearches]);
+  }, [popularSearches]);
 
   const handleSuggestionClick = (suggestion: string) => {
     setSearchQuery(suggestion);

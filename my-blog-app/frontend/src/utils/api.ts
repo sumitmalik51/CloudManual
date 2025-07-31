@@ -122,13 +122,65 @@ export const blogAPI = {
   },
 
   getPostBySlug: async (slug: string): Promise<Post> => {
-    const response = await api.get(`/posts/${slug}`);
-    return response.data;
+    try {
+      const response = await api.get(`/posts/${slug}`);
+      return response.data;
+    } catch (error: any) {
+      // Handle view increment errors specifically - log but allow post to be displayed
+      if (error.response?.status === 500) {
+        console.warn(`View increment may have failed for post '${slug}', but attempting to retrieve post data:`, error.message);
+        
+        // Log detailed error info for debugging
+        if (error.response?.data) {
+          console.warn('Backend error details:', error.response.data);
+        }
+        
+        // Try a second request in case it was a temporary issue
+        try {
+          const retryResponse = await api.get(`/posts/${slug}`);
+          console.log('Retry successful for post:', slug);
+          return retryResponse.data;
+        } catch (retryError) {
+          console.error('Retry also failed for post:', slug, retryError);
+          // If retry fails, still throw the original error
+          throw error;
+        }
+      }
+      
+      // For other errors (404, etc.), throw as normal
+      throw error;
+    }
   },
 
   likePost: async (slug: string): Promise<{ likes: number }> => {
-    const response = await api.post(`/posts/${slug}/like`);
-    return response.data;
+    try {
+      const response = await api.post(`/posts/${slug}/like`);
+      return response.data;
+    } catch (error: any) {
+      // Handle like increment errors specifically
+      if (error.response?.status === 500) {
+        console.warn(`Like increment failed for post '${slug}':`, error.message);
+        
+        // Log detailed error info for debugging
+        if (error.response?.data) {
+          console.warn('Backend like error details:', error.response.data);
+        }
+        
+        // Try a second request in case it was a temporary issue
+        try {
+          const retryResponse = await api.post(`/posts/${slug}/like`);
+          console.log('Like retry successful for post:', slug);
+          return retryResponse.data;
+        } catch (retryError) {
+          console.error('Like retry also failed for post:', slug, retryError);
+          // For now, still throw the original error
+          throw error;
+        }
+      }
+      
+      // For other errors, throw as normal
+      throw error;
+    }
   },
 
   // Admin endpoints

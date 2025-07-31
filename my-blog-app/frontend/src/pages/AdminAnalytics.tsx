@@ -51,23 +51,98 @@ const AdminAnalytics: React.FC = () => {
       setLoading(true);
       const token = localStorage.getItem('adminToken');
       
-      const response = await fetch('http://localhost:5000/api/posts/admin/analytics', {
+      // Fetch all posts to calculate analytics
+      const response = await fetch('http://localhost:5000/api/posts/admin?limit=1000&sortBy=createdAt&sortOrder=desc', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch analytics');
+        throw new Error('Failed to fetch posts data');
       }
 
       const data = await response.json();
-      setAnalytics(data);
+      const posts = data.posts || [];
+      
+      // Calculate analytics from posts data
+      const analyticsData = calculateAnalytics(posts);
+      setAnalytics(analyticsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateAnalytics = (posts: any[]): AnalyticsData => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Basic stats
+    const totalPosts = posts.length;
+    const publishedPosts = posts.filter(p => p.status === 'published').length;
+    const draftPosts = posts.filter(p => p.status === 'draft').length;
+    const totalViews = posts.reduce((sum, p) => sum + (p.views || 0), 0);
+    const averageViews = totalPosts > 0 ? Math.round(totalViews / totalPosts) : 0;
+    
+    // Posts this month
+    const postsThisMonth = posts.filter(p => {
+      const postDate = new Date(p.createdAt);
+      return postDate.getMonth() === currentMonth && postDate.getFullYear() === currentYear;
+    }).length;
+    
+    // Top posts by views
+    const topPosts = posts
+      .filter(p => p.status === 'published')
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 5)
+      .map(p => ({
+        _id: p.id,
+        title: p.title,
+        slug: p.slug,
+        views: p.views || 0,
+        createdAt: p.createdAt
+      }));
+    
+    // Recent activity (recent posts)
+    const recentActivity = posts
+      .slice(0, 10)
+      .map(p => ({
+        _id: p.id,
+        title: p.title,
+        action: 'created' as const,
+        date: p.createdAt
+      }));
+    
+    // Monthly stats for the last 6 months
+    const monthlyStats = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(currentYear, currentMonth - i, 1);
+      const monthPosts = posts.filter(p => {
+        const postDate = new Date(p.createdAt);
+        return postDate.getMonth() === date.getMonth() && postDate.getFullYear() === date.getFullYear();
+      });
+      
+      monthlyStats.push({
+        month: date.toLocaleString('default', { month: 'short', year: 'numeric' }),
+        posts: monthPosts.length,
+        views: monthPosts.reduce((sum, p) => sum + (p.views || 0), 0)
+      });
+    }
+    
+    return {
+      totalPosts,
+      publishedPosts,
+      draftPosts,
+      totalViews,
+      averageViews,
+      postsThisMonth,
+      topPosts,
+      recentActivity,
+      monthlyStats
+    };
   };
 
   if (loading) {

@@ -11,8 +11,17 @@ export function useDarkMode() {
     if (stored) {
       setIsDark(stored === 'true');
     } else {
-      // Default to system preference
-      setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+      // Default to system preference with defensive check
+      if (typeof window !== 'undefined' && window.matchMedia && typeof window.matchMedia === 'function') {
+        try {
+          setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+        } catch (error) {
+          console.warn('Error accessing matchMedia in useDarkMode:', error);
+          setIsDark(false);
+        }
+      } else {
+        setIsDark(false);
+      }
     }
   }, []);
 

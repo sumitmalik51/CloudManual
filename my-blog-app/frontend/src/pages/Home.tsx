@@ -96,8 +96,19 @@ const Home: React.FC = () => {
   // Dark mode state - you can connect this to a context or localStorage
   const [isDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('darkMode') === 'true' || 
-             (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const storedMode = localStorage.getItem('darkMode');
+      if (storedMode !== null) {
+        return storedMode === 'true';
+      }
+      // Fallback for system preference
+      if (window.matchMedia && typeof window.matchMedia === 'function') {
+        try {
+          return window.matchMedia('(prefers-color-scheme: dark)').matches;
+        } catch (error) {
+          console.warn('Error accessing matchMedia:', error);
+          return false;
+        }
+      }
     }
     return false;
   });

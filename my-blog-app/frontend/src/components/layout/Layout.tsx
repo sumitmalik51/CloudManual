@@ -2,6 +2,7 @@ import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import BackToTop from '../ui/BackToTop';
+import PerformanceStatus from '../ui/PerformanceStatus';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
       </main>
       <Footer />
       <BackToTop />
+      <PerformanceStatus showOnLoad={false} />
     </div>
   );
 };

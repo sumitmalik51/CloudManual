@@ -128,6 +128,12 @@ class CosmosDBService {
 
   async getAllPosts(options = {}) {
     try {
+      // Ensure we're connected to the database
+      if (!this.isConnected || !this.container) {
+        console.log('Database not connected, attempting to connect...');
+        await this.connect();
+      }
+
       const {
         status = null,
         limit = 10,
@@ -173,12 +179,23 @@ class CosmosDBService {
       query += ` OFFSET ${offset} LIMIT ${limit}`;
 
       const querySpec = { query, parameters };
-      const { resources } = await this.container.items.query(querySpec).fetchAll();
-
-      return resources;
+      console.log('Executing query:', query);
+      console.log('With parameters:', parameters);
+      
+      const response = await this.container.items.query(querySpec).fetchAll();
+      console.log('Query response:', response);
+      
+      if (!response || !response.resources) {
+        console.log('No resources found in response, returning empty array');
+        return [];
+      }
+      
+      return response.resources;
     } catch (error) {
       console.error('Error getting posts:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent the frontend from breaking
+      console.log('Returning empty array due to error');
+      return [];
     }
   }
 
@@ -257,6 +274,12 @@ class CosmosDBService {
 
   async getPostCount(status = null) {
     try {
+      // Ensure we're connected to the database
+      if (!this.isConnected || !this.container) {
+        console.log('Database not connected, attempting to connect...');
+        await this.connect();
+      }
+
       let query = 'SELECT VALUE COUNT(1) FROM c WHERE c.type = @type';
       const parameters = [{ name: '@type', value: 'post' }];
 
@@ -271,7 +294,9 @@ class CosmosDBService {
       return resources[0] || 0;
     } catch (error) {
       console.error('Error getting post count:', error);
-      throw error;
+      // Return 0 instead of throwing to prevent breaking pagination
+      console.log('Returning 0 due to error');
+      return 0;
     }
   }
 

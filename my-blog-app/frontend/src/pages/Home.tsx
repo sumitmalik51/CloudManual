@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
@@ -8,6 +8,7 @@ import TopicsModal from '../components/ui/TopicsModal';
 import PageTransition from '../components/ui/PageTransition';
 import LazyImage from '../components/ui/LazyImage';
 import OptimizedBlogGrid from '../components/ui/OptimizedBlogGrid';
+import SmoothLoading from '../components/ui/SmoothLoading';
 import { blogAPI } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
 
@@ -148,11 +149,17 @@ const Home: React.FC = () => {
     }, 300);
   }, [allPosts]);
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    setShowSuggestions(false);
-    debouncedSearch(suggestion);
-  };
+  const handleTagClick = useCallback((tag: string, isActive: boolean) => {
+    if (isActive) {
+      setActiveFilters(prev => prev.filter(f => f !== tag));
+      setSearchQuery('');
+      debouncedSearch('');
+    } else {
+      setActiveFilters(prev => [...prev, tag]);
+      setSearchQuery(tag);
+      debouncedSearch(tag);
+    }
+  }, [debouncedSearch]);
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,26 +242,26 @@ const Home: React.FC = () => {
     };
   }, []);
 
-  const categories = ['All', 'Cloud', 'DevOps', 'AI', 'Security', 'WebDev'];
+  const categories = useMemo(() => ['All', 'Cloud', 'DevOps', 'AI', 'Security', 'WebDev'], []);
 
-  const handleCategoryChange = (newCategory: string) => {
+  const handleCategoryChange = useCallback((newCategory: string) => {
     setCategory(newCategory);
     setPosts([]);
     setShowAllPosts(false);
     setLoading(true);
-  };
+  }, []);
 
-  const handleViewAllPosts = () => {
+  const handleViewAllPosts = useCallback(() => {
     setShowAllPosts(true);
     setLoading(true);
-  };
+  }, []);
 
-  const handleShowLess = () => {
+  const handleShowLess = useCallback(() => {
     setShowAllPosts(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
-  const handleLikePost = async (postSlug: string, event: React.MouseEvent) => {
+  const handleLikePost = useCallback(async (postSlug: string, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
     
@@ -281,7 +288,29 @@ const Home: React.FC = () => {
       console.error('Error liking post:', error);
       // Optional: show a toast notification for errors
     }
-  };
+  }, []);
+
+  // Memoized computation for filtering posts to display
+  const postsToDisplay = useMemo(() => {
+    if (showAllPosts) return posts;
+    return posts.slice(0, maxHomePosts);
+  }, [posts, showAllPosts, maxHomePosts]);
+
+  // Memoized popular tags computation
+  const popularTags = useMemo(() => {
+    const tagCount = new Map<string, number>();
+    
+    allPosts.forEach(post => {
+      post.tags?.forEach(tag => {
+        tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
+      });
+    });
+    
+    return Array.from(tagCount.entries())
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 6)
+      .map(([tag]) => tag);
+  }, [allPosts]);
 
   return (
     <PageTransition>
@@ -482,22 +511,12 @@ const Home: React.FC = () => {
 
             {/* Enhanced Quick Search Tags with toggleable filters */}
             <div className="flex flex-wrap justify-center gap-3 mt-6">
-              {['Azure', 'AWS', 'Docker', 'Kubernetes', 'AI/ML', 'DevOps'].map((tag) => {
+              {popularTags.map((tag) => {
                 const isActive = activeFilters.includes(tag) || searchQuery === tag;
                 return (
                   <button
                     key={tag}
-                    onClick={() => {
-                      if (isActive) {
-                        setActiveFilters(prev => prev.filter(f => f !== tag));
-                        setSearchQuery('');
-                        debouncedSearch('');
-                      } else {
-                        setActiveFilters(prev => [...prev, tag]);
-                        setSearchQuery(tag);
-                        debouncedSearch(tag);
-                      }
-                    }}
+                    onClick={() => handleTagClick(tag, isActive)}
                     className={`group relative px-4 py-2 backdrop-blur-sm rounded-lg font-medium transition-all duration-300 border transform hover:scale-105 hover:-translate-y-1 ${
                       isActive 
                         ? 'bg-white/25 text-white border-white/40 shadow-lg' 
@@ -771,7 +790,7 @@ const Home: React.FC = () => {
                           <rect width="100%" height="100%" fill="#f3f4f6"/>
                         </svg>`
                       )}`}
-                      aspectRatio="auto"
+                      aspectRatio="wide"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent group-hover:from-black/30 transition-all duration-300"></div>
@@ -1028,7 +1047,7 @@ const Home: React.FC = () => {
             )}
 
             <OptimizedBlogGrid
-              posts={posts.slice(0, showAllPosts ? posts.length : maxHomePosts)}
+              posts={postsToDisplay}
               viewMode={viewMode}
               onLike={handleLikePost}
               onShare={(slug, event) => {
@@ -1095,35 +1114,6 @@ const Home: React.FC = () => {
 
           {/* Sidebar */}
           <aside className="space-y-8">
-            {/* Newsletter Subscription */}
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Stay Updated</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  Get the latest cloud tips and updates straight to your inbox. No spam, ever.
-                </p>
-              </div>
-              
-              <form className="space-y-4">
-                <input 
-                  type="email" 
-                  placeholder="Enter your email" 
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200" 
-                />
-                <button 
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
-                >
-                  Subscribe
-                </button>
-              </form>
-            </div>
-
             {/* Trending Posts */}
             <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700">
               <div className="flex items-center mb-6">

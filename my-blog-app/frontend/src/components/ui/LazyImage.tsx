@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LazyImageProps {
   src: string;
@@ -30,6 +31,15 @@ const LazyImage: React.FC<LazyImageProps> = ({
     tall: 'aspect-[4/5]'
   };
 
+  const handleLoad = useCallback(() => {
+    setLoaded(true);
+    onLoad?.();
+  }, [onLoad]);
+
+  const handleError = useCallback(() => {
+    setError(true);
+  }, []);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -40,7 +50,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
       },
       {
         threshold: 0.1,
-        rootMargin: '50px 0px'
+        rootMargin: '100px 0px' // Increased for earlier loading
       }
     );
 
@@ -51,35 +61,41 @@ const LazyImage: React.FC<LazyImageProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  const handleLoad = () => {
-    setLoaded(true);
-    onLoad?.();
-  };
-
-  const handleError = () => {
-    setError(true);
-  };
-
   return (
     <div
       ref={containerRef}
       className={`relative overflow-hidden bg-gray-200 dark:bg-gray-700 ${aspectRatioClasses[aspectRatio]} ${className}`}
     >
-      {/* Blur placeholder */}
-      {blurDataURL && !loaded && (
-        <img
-          src={blurDataURL}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover filter blur-md scale-110"
-        />
-      )}
+      {/* Blur placeholder with smooth transition */}
+      <AnimatePresence>
+        {blurDataURL && !loaded && (
+          <motion.img
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            src={blurDataURL}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover filter blur-md scale-110"
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Loading skeleton */}
-      {!loaded && !error && (
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-pulse">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
-        </div>
-      )}
+      {/* Loading skeleton with enhanced animation */}
+      <AnimatePresence>
+        {!loaded && !error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+            <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 opacity-30"></div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Error state */}
       {error && (
@@ -93,26 +109,44 @@ const LazyImage: React.FC<LazyImageProps> = ({
         </div>
       )}
 
-      {/* Actual image */}
+      {/* Actual image with smooth fade-in */}
       {inView && (
-        <img
+        <motion.img
           ref={imgRef}
           src={src}
           alt={alt}
           onLoad={handleLoad}
           onError={handleError}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
-            loaded ? 'opacity-100' : 'opacity-0'
-          }`}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ 
+            opacity: loaded ? 1 : 0,
+            scale: loaded ? 1 : 1.05
+          }}
+          transition={{ 
+            duration: 0.6,
+            ease: [0.25, 0.46, 0.45, 0.94]
+          }}
+          className="absolute inset-0 w-full h-full object-cover"
         />
       )}
 
-      {/* Loading indicator */}
-      {inView && !loaded && !error && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-8 h-8 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        </div>
-      )}
+      {/* Enhanced loading indicator */}
+      <AnimatePresence>
+        {inView && !loaded && !error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <div className="relative">
+              <div className="w-8 h-8 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 w-8 h-8 border-3 border-transparent border-r-purple-400 rounded-full animate-spin" 
+                   style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}></div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

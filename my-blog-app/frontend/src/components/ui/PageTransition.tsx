@@ -25,11 +25,9 @@ const pageVariants = {
 };
 
 const pageTransition = {
-  type: "spring",
-  stiffness: 100,
-  damping: 25,
-  duration: 0.6,
-  ease: [0.25, 0.46, 0.45, 0.94]
+  type: "tween" as const,
+  ease: [0.25, 0.46, 0.45, 0.94] as const,
+  duration: 0.4
 };
 
 const containerVariants = {
@@ -52,23 +50,7 @@ const containerVariants = {
   }
 };
 
-const childVariants = {
-  initial: {
-    opacity: 0,
-    y: 20,
-    scale: 0.9
-  },
-  in: {
-    opacity: 1,
-    y: 0,
-    scale: 1
-  },
-  out: {
-    opacity: 0,
-    y: -10,
-    scale: 1.1
-  }
-};
+
 
 const PageTransition: React.FC<PageTransitionProps> = ({ children, className = '' }) => {
   return (

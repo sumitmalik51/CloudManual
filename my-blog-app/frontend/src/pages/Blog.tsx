@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import BlogListCard from '../components/ui/BlogListCard';
@@ -21,7 +21,7 @@ const Blog: React.FC = () => {
   const tag = searchParams.get('tag') || '';
   const search = searchParams.get('search') || '';
 
-  const fetchPosts = async (params: {
+  const fetchPosts = useCallback(async (params: {
     page?: number;
     category?: string;
     tag?: string;
@@ -43,7 +43,7 @@ const Blog: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, category, tag, search]);
 
   // Handle filter changes
   const handleFilterChange = (filterType: 'category' | 'tag', value: string) => {
@@ -73,7 +73,7 @@ const Blog: React.FC = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, [currentPage, category, tag, search]);
+  }, [currentPage, category, tag, search, fetchPosts]);
 
   const hasActiveFilters = category || tag || search;
 

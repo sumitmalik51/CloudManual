@@ -1,11 +1,14 @@
 import { useCallback } from 'react';
+import type { Variants } from 'framer-motion';
+
+type Direction = 'up' | 'down' | 'left' | 'right';
 
 interface AnimationPresets {
-  fadeIn: any;
-  slideIn: any;
-  scaleIn: any;
-  staggerContainer: any;
-  staggerItem: any;
+  fadeIn: (delay?: number, duration?: number) => Variants;
+  slideIn: (direction?: Direction, delay?: number, duration?: number) => Variants;
+  scaleIn: (delay?: number, duration?: number) => Variants;
+  staggerContainer: (delayChildren?: number, staggerChildren?: number) => Variants;
+  staggerItem: (delay?: number, duration?: number) => Variants;
 }
 
 export const useAnimationPresets = (): AnimationPresets => {
@@ -20,8 +23,8 @@ export const useAnimationPresets = (): AnimationPresets => {
     }
   }), []);
 
-  const slideIn = useCallback((direction = 'up', delay = 0, duration = 0.6) => {
-    const directions = {
+  const slideIn = useCallback((direction: Direction = 'up', delay = 0, duration = 0.6) => {
+    const directions: Record<Direction, { x?: number; y?: number }> = {
       up: { y: 30 },
       down: { y: -30 },
       left: { x: 30 },
@@ -70,12 +73,12 @@ export const useAnimationPresets = (): AnimationPresets => {
     initial: { opacity: 0, y: 20 },
     animate: { 
       opacity: 1, 
-      y: 0,
-      transition: {
-        duration: 0.6,
-        delay,
-        ease: [0.25, 0.46, 0.45, 0.94]
-      }
+      y: 0
+    },
+    transition: {
+      duration: 0.6,
+      delay,
+      ease: [0.25, 0.46, 0.45, 0.94] as const
     }
   }), []);
 

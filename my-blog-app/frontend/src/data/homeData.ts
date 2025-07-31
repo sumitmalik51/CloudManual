@@ -118,7 +118,14 @@ export const homeData = {
   ]
 };
 
-export const getStatsData = (stats: any) => [
+interface StatsData {
+  totalPosts: number;
+  totalViews: number;
+  totalReaders: number;
+  categories: number;
+}
+
+export const getStatsData = (stats: StatsData) => [
   { 
     label: 'Published Articles', 
     value: stats.totalPosts.toString(), 

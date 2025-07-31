@@ -40,7 +40,7 @@ const Contact: React.FC = () => {
         message: '',
         inquiryType: 'general'
       });
-    } catch (error) {
+    } catch {
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);

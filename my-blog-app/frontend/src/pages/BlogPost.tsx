@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import Layout from '../components/layout/Layout';
@@ -19,7 +19,7 @@ const BlogPost: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
 
-  const fetchPost = async () => {
+  const fetchPost = useCallback(async () => {
     if (!slug) {
       setError('Post not found');
       setLoading(false);
@@ -65,11 +65,11 @@ const BlogPost: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug]);
 
   useEffect(() => {
     fetchPost();
-  }, [slug]);
+  }, [slug, fetchPost]);
 
   const handleLikePost = async () => {
     if (!post) return;

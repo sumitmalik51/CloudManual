@@ -574,4 +574,25 @@ router.get('/:slug', async (req, res) => {
   }
 });
 
+// POST /api/posts/admin/cleanup-duplicates - Clean up duplicate posts (admin only)
+router.post('/admin/cleanup-duplicates', authenticateToken, async (req, res) => {
+  try {
+    console.log('🧹 Starting duplicate post cleanup...');
+    const result = await cosmosDB.cleanupDuplicatePosts();
+    
+    res.json({
+      success: true,
+      message: result.message,
+      cleaned: result.cleaned
+    });
+  } catch (error) {
+    console.error('Error during cleanup:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during cleanup',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

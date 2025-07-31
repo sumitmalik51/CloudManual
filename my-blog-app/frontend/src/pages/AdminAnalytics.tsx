@@ -34,6 +34,7 @@ const AdminAnalytics: React.FC = () => {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,6 +69,7 @@ const AdminAnalytics: React.FC = () => {
       // Calculate analytics from posts data
       const analyticsData = calculateAnalytics(posts);
       setAnalytics(analyticsData);
+      setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -80,12 +82,18 @@ const AdminAnalytics: React.FC = () => {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
-    // Basic stats
+    // Basic stats with null/undefined handling
     const totalPosts = posts.length;
     const publishedPosts = posts.filter(p => p.status === 'published').length;
     const draftPosts = posts.filter(p => p.status === 'draft').length;
-    const totalViews = posts.reduce((sum, p) => sum + (p.views || 0), 0);
-    const averageViews = totalPosts > 0 ? Math.round(totalViews / totalPosts) : 0;
+    
+    // Handle view count inconsistencies
+    const validPosts = posts.filter(p => p.views !== null && p.views !== undefined);
+    const totalViews = posts.reduce((sum, p) => {
+      const views = parseInt(p.views) || 0;
+      return sum + views;
+    }, 0);
+    const averageViews = validPosts.length > 0 ? Math.round(totalViews / validPosts.length) : 0;
     
     // Posts this month
     const postsThisMonth = posts.filter(p => {
@@ -93,16 +101,20 @@ const AdminAnalytics: React.FC = () => {
       return postDate.getMonth() === currentMonth && postDate.getFullYear() === currentYear;
     }).length;
     
-    // Top posts by views
+    // Top posts by views - handle view count issues
     const topPosts = posts
       .filter(p => p.status === 'published')
-      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .map(p => ({
+        ...p,
+        views: parseInt(p.views) || 0 // Ensure views is a number
+      }))
+      .sort((a, b) => b.views - a.views)
       .slice(0, 5)
       .map(p => ({
         _id: p.id,
         title: p.title,
         slug: p.slug,
-        views: p.views || 0,
+        views: p.views,
         createdAt: p.createdAt
       }));
     
@@ -125,10 +137,15 @@ const AdminAnalytics: React.FC = () => {
         return postDate.getMonth() === date.getMonth() && postDate.getFullYear() === date.getFullYear();
       });
       
+      const monthViews = monthPosts.reduce((sum, p) => {
+        const views = parseInt(p.views) || 0;
+        return sum + views;
+      }, 0);
+      
       monthlyStats.push({
         month: date.toLocaleString('default', { month: 'short', year: 'numeric' }),
         posts: monthPosts.length,
-        views: monthPosts.reduce((sum, p) => sum + (p.views || 0), 0)
+        views: monthViews
       });
     }
     
@@ -177,13 +194,67 @@ const AdminAnalytics: React.FC = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-              <p className="text-gray-600">Detailed insights about your CloudManual blog performance</p>
+              <p className="text-gray-600">
+                Detailed insights about your CloudManual blog performance
+                {lastUpdated && (
+                  <span className="text-sm text-gray-500 ml-2">
+                    • Last updated: {lastUpdated.toLocaleTimeString()}
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => {
+                  setError(null);
+                  fetchAnalytics();
+                }}
+                disabled={loading}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                  loading 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                } transition-colors`}
+              >
+                <svg 
+                  className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                  />
+                </svg>
+                {loading ? 'Refreshing...' : 'Refresh Data'}
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       <main className="flex-1 p-6">
+        {/* Data Info Banner */}
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h3 className="text-sm font-medium text-blue-800">Live Analytics Data</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                Analytics are calculated in real-time from your actual posts data. View counts are synchronized from your CosmosDB database.
+                {analytics && (
+                  <span className="font-medium"> Currently showing data for {analytics.totalPosts} posts.</span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Overview Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">

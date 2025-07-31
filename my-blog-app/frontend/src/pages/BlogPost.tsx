@@ -19,6 +19,9 @@ const BlogPost: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
 
+  const [likeError, setLikeError] = useState<string | null>(null);
+  const [isLiking, setIsLiking] = useState(false);
+
   const fetchPost = useCallback(async () => {
     if (!slug) {
       setError('Post not found');
@@ -61,7 +64,18 @@ const BlogPost: React.FC = () => {
       }
 
     } catch (err) {
-      setError(getErrorMessage(err));
+      const errorMessage = getErrorMessage(err);
+      
+      // Provide more user-friendly error messages for common issues
+      if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
+        setError('Sorry, there was a temporary issue loading this post. Please try refreshing the page.');
+      } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+        setError('Post not found. It may have been moved or deleted.');
+      } else {
+        setError(errorMessage);
+      }
+      
+      console.error('Error fetching post:', err);
     } finally {
       setLoading(false);
     }
@@ -72,15 +86,46 @@ const BlogPost: React.FC = () => {
   }, [slug, fetchPost]);
 
   const handleLikePost = async () => {
-    if (!post) return;
+    if (!post || isLiking) return;
+    
+    setIsLiking(true);
+    setLikeError(null);
+    
+    // Optimistically update the UI
+    const originalLikes = post.likes;
+    setPost(prevPost => 
+      prevPost ? { ...prevPost, likes: prevPost.likes + 1 } : null
+    );
     
     try {
+      // Attempt to like the post on the backend
       const result = await blogAPI.likePost(post.slug);
+      
+      // Update with the actual result from backend
       setPost(prevPost => 
         prevPost ? { ...prevPost, likes: result.likes } : null
       );
-    } catch (error) {
+      
+      console.log('Post liked successfully');
+    } catch (error: any) {
       console.error('Error liking post:', error);
+      
+      // Revert the optimistic update
+      setPost(prevPost => 
+        prevPost ? { ...prevPost, likes: originalLikes } : null
+      );
+      
+      // Set user-friendly error message
+      if (error.response?.status === 500) {
+        setLikeError('Unable to save your like due to a temporary issue. Please try again.');
+      } else {
+        setLikeError('Failed to like post. Please try again.');
+      }
+      
+      // Clear error after 5 seconds
+      setTimeout(() => setLikeError(null), 5000);
+    } finally {
+      setIsLiking(false);
     }
   };
 
@@ -211,15 +256,33 @@ const BlogPost: React.FC = () => {
             </div>
 
             {/* Like Button */}
-            <button 
-              onClick={handleLikePost}
-              className="flex items-center text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors duration-200"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              <span>{post.likes || 0} likes</span>
-            </button>
+            <div className="flex flex-col items-start">
+              <button 
+                onClick={handleLikePost}
+                disabled={isLiking}
+                className={`flex items-center transition-colors duration-200 ${
+                  isLiking 
+                    ? 'text-gray-400 cursor-not-allowed' 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400'
+                }`}
+              >
+                <svg 
+                  className={`w-4 h-4 mr-2 ${isLiking ? 'animate-pulse' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <span>{post.likes || 0} likes {isLiking ? '(saving...)' : ''}</span>
+              </button>
+              
+              {likeError && (
+                <div className="text-xs text-red-600 mt-1 max-w-xs">
+                  {likeError}
+                </div>
+              )}
+            </div>
 
             {post.views > 0 && (
               <div className="flex items-center">

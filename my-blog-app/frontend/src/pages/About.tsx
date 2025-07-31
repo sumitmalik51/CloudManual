@@ -321,7 +321,7 @@ const About: React.FC = () => {
               Browse Articles
             </Link>
             <a 
-              href="mailto:contact@cloudmanual.com"
+              href="mailto:sumitmalik51@gmail.com"
               className="inline-flex items-center px-8 py-4 border-2 border-white text-white rounded-xl font-semibold hover:bg-white hover:text-indigo-600 transition-all duration-300"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

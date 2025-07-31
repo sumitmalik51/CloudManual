@@ -7,6 +7,7 @@ import { LoadingPage } from '../components/ui/Loading';
 import ErrorMessage from '../components/ui/ErrorMessage';
 import PageTransition from '../components/ui/PageTransition';
 import ReadingProgressBar from '../components/ui/ReadingProgressBar';
+import ReadingEngagement from '../components/ui/ReadingEngagement';
 import Comments from '../components/ui/Comments';
 import { blogAPI, type Post } from '../utils/api';
 import { formatDate, getErrorMessage, generateMetaTitle, generateMetaDescription } from '../utils/helpers';
@@ -264,6 +265,16 @@ const BlogPost: React.FC = () => {
             <ReactMarkdown>{post.content}</ReactMarkdown>
           </div>
         </div>
+
+        {/* Reading Engagement Tracking */}
+        <ReadingEngagement
+          content={post.content}
+          title={post.title}
+          onEngagementUpdate={(data: { readingTime: number; timeSpent: number; scrollProgress: number; engagementScore: number }) => {
+            console.log('Reading engagement data:', data);
+            // Here you could send engagement data to analytics
+          }}
+        />
 
         {/* Share Buttons */}
         <div className="border-t border-gray-200 dark:border-gray-700 pt-8 mb-12">

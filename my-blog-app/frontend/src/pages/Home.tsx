@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
@@ -6,8 +6,23 @@ import SEOHead from '../components/seo/SEOHead';
 import ErrorMessage from '../components/ui/ErrorMessage';
 import TopicsModal from '../components/ui/TopicsModal';
 import PageTransition from '../components/ui/PageTransition';
+import LazyImage from '../components/ui/LazyImage';
+import OptimizedBlogGrid from '../components/ui/OptimizedBlogGrid';
+import SmoothLoading from '../components/ui/SmoothLoading';
 import { blogAPI } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
+
+// Sample search suggestions (moved outside component to avoid recreation)
+const POPULAR_SEARCHES = [
+  'GitHub Copilot tutorial',
+  'Azure container apps',
+  'Docker best practices',
+  'Kubernetes deployment',
+  'AI model implementation',
+  'DevOps automation',
+  'TypeScript performance',
+  'Cloud architecture patterns'
+];
 
 const Home: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
@@ -34,6 +49,12 @@ const Home: React.FC = () => {
     totalReaders: 0,
     categories: 0
   });
+
+  // Featured posts rotation state
+  const [currentFeaturedIndex, setCurrentFeaturedIndex] = useState(0);
+  const [featuredPosts, setFeaturedPosts] = useState<any[]>([]);
+  const [isPaused, setIsPaused] = useState(false);
+  const featuredRotationRef = useRef<NodeJS.Timeout | null>(null);
 
   // Topics data for modal
   const topicsData = [
@@ -98,18 +119,6 @@ const Home: React.FC = () => {
     return Math.ceil(words / wordsPerMinute);
   };
 
-  // Sample search suggestions (in real app, this would come from API)
-  const popularSearches = [
-    'GitHub Copilot tutorial',
-    'Azure container apps',
-    'Docker best practices',
-    'Kubernetes deployment',
-    'AI model implementation',
-    'DevOps automation',
-    'TypeScript performance',
-    'Cloud architecture patterns'
-  ];
-
   // Enhanced debounced search function with suggestions
   const debouncedSearch = useCallback((query: string) => {
     if (searchTimeoutRef.current) {
@@ -118,7 +127,7 @@ const Home: React.FC = () => {
     
     // Update suggestions
     if (query.length > 0) {
-      const suggestions = popularSearches.filter(search => 
+      const suggestions = POPULAR_SEARCHES.filter((search: string) => 
         search.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5);
       setSearchSuggestions(suggestions);
@@ -138,13 +147,19 @@ const Home: React.FC = () => {
       setPosts(filtered);
       setIsSearching(false);
     }, 300);
-  }, [allPosts, popularSearches]);
+  }, [allPosts]);
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    setShowSuggestions(false);
-    debouncedSearch(suggestion);
-  };
+  const handleTagClick = useCallback((tag: string, isActive: boolean) => {
+    if (isActive) {
+      setActiveFilters(prev => prev.filter(f => f !== tag));
+      setSearchQuery('');
+      debouncedSearch('');
+    } else {
+      setActiveFilters(prev => [...prev, tag]);
+      setSearchQuery(tag);
+      debouncedSearch(tag);
+    }
+  }, [debouncedSearch]);
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,6 +192,11 @@ const Home: React.FC = () => {
       
       setPosts(data.posts);
       setAllPosts(data.posts);
+      
+      // Select featured posts (latest 5 posts for rotation)
+      const featured = data.posts.slice(0, 5);
+      setFeaturedPosts(featured);
+      
       // Simulate stats (in real app, this would come from API)
       setStats({
         totalPosts: data.pagination?.totalPosts || data.posts.length,
@@ -196,26 +216,52 @@ const Home: React.FC = () => {
     fetchPosts();
   }, [fetchPosts]);
 
-  const categories = ['All', 'Cloud', 'DevOps', 'AI', 'Security', 'WebDev'];
+  // Featured posts auto-rotation effect
+  useEffect(() => {
+    if (featuredPosts.length > 1 && !isPaused) {
+      featuredRotationRef.current = setInterval(() => {
+        setCurrentFeaturedIndex((prevIndex) => 
+          (prevIndex + 1) % featuredPosts.length
+        );
+      }, 5000); // Rotate every 5 seconds
 
-  const handleCategoryChange = (newCategory: string) => {
+      return () => {
+        if (featuredRotationRef.current) {
+          clearInterval(featuredRotationRef.current);
+        }
+      };
+    }
+  }, [featuredPosts.length, isPaused]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (featuredRotationRef.current) {
+        clearInterval(featuredRotationRef.current);
+      }
+    };
+  }, []);
+
+  const categories = useMemo(() => ['All', 'Cloud', 'DevOps', 'AI', 'Security', 'WebDev'], []);
+
+  const handleCategoryChange = useCallback((newCategory: string) => {
     setCategory(newCategory);
     setPosts([]);
     setShowAllPosts(false);
     setLoading(true);
-  };
+  }, []);
 
-  const handleViewAllPosts = () => {
+  const handleViewAllPosts = useCallback(() => {
     setShowAllPosts(true);
     setLoading(true);
-  };
+  }, []);
 
-  const handleShowLess = () => {
+  const handleShowLess = useCallback(() => {
     setShowAllPosts(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
-  const handleLikePost = async (postSlug: string, event: React.MouseEvent) => {
+  const handleLikePost = useCallback(async (postSlug: string, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
     
@@ -242,7 +288,29 @@ const Home: React.FC = () => {
       console.error('Error liking post:', error);
       // Optional: show a toast notification for errors
     }
-  };
+  }, []);
+
+  // Memoized computation for filtering posts to display
+  const postsToDisplay = useMemo(() => {
+    if (showAllPosts) return posts;
+    return posts.slice(0, maxHomePosts);
+  }, [posts, showAllPosts, maxHomePosts]);
+
+  // Memoized popular tags computation
+  const popularTags = useMemo(() => {
+    const tagCount = new Map<string, number>();
+    
+    allPosts.forEach(post => {
+      post.tags?.forEach(tag => {
+        tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
+      });
+    });
+    
+    return Array.from(tagCount.entries())
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 6)
+      .map(([tag]) => tag);
+  }, [allPosts]);
 
   return (
     <PageTransition>
@@ -319,7 +387,7 @@ const Home: React.FC = () => {
             {/* Live Badge - Clickable with enhanced animation */}
             <div className="flex justify-center mb-6 animate-slide-in-right" style={{ animationDelay: '1s' }}>
               <Link 
-                to="/whats-new"
+                to="/blog"
                 className="group flex items-center space-x-2 bg-green-500/20 backdrop-blur-sm rounded-full px-4 py-2 border border-green-400/30 hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 cursor-pointer transform hover:scale-110 hover:rotate-1"
               >
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse group-hover:animate-bounce"></div>
@@ -443,22 +511,12 @@ const Home: React.FC = () => {
 
             {/* Enhanced Quick Search Tags with toggleable filters */}
             <div className="flex flex-wrap justify-center gap-3 mt-6">
-              {['Azure', 'AWS', 'Docker', 'Kubernetes', 'AI/ML', 'DevOps'].map((tag) => {
+              {popularTags.map((tag) => {
                 const isActive = activeFilters.includes(tag) || searchQuery === tag;
                 return (
                   <button
                     key={tag}
-                    onClick={() => {
-                      if (isActive) {
-                        setActiveFilters(prev => prev.filter(f => f !== tag));
-                        setSearchQuery('');
-                        debouncedSearch('');
-                      } else {
-                        setActiveFilters(prev => [...prev, tag]);
-                        setSearchQuery(tag);
-                        debouncedSearch(tag);
-                      }
-                    }}
+                    onClick={() => handleTagClick(tag, isActive)}
                     className={`group relative px-4 py-2 backdrop-blur-sm rounded-lg font-medium transition-all duration-300 border transform hover:scale-105 hover:-translate-y-1 ${
                       isActive 
                         ? 'bg-white/25 text-white border-white/40 shadow-lg' 
@@ -687,55 +745,165 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Featured Post */}
-      {!loading && posts.length > 0 && (
+      {/* Dynamic Featured Posts Carousel */}
+      {!loading && featuredPosts.length > 0 && (
         <section className="py-16 px-6 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white">Featured Post</h2>
+              <div className="flex items-center space-x-4">
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white">Featured Posts</h2>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Auto-rotating</span>
+                </div>
+              </div>
               <div className="w-24 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"></div>
             </div>
             
-            <div className="bg-white dark:bg-gray-800 shadow-2xl rounded-2xl overflow-hidden md:flex group hover:shadow-3xl transition-all duration-500">
-              <div className="w-full md:w-1/2 relative overflow-hidden">
-                <img 
-                  src={posts[0].featuredImage || `https://picsum.photos/600/400?random=${posts[0].id}`}
-                  alt={posts[0].title} 
-                  className="w-full h-80 md:h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent group-hover:from-black/30 transition-all duration-300"></div>
-              </div>
-              <div className="flex-1 p-8 md:p-12 flex flex-col justify-center">
-                <div className="mb-4">
-                  {posts[0].tags && posts[0].tags.length > 0 && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                      {posts[0].tags[0]}
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white leading-tight">
-                  {posts[0].title}
-                </h3>
-                <p className="text-lg text-gray-600 dark:text-gray-300 mb-6 leading-relaxed line-clamp-3">
-                  {posts[0].excerpt || posts[0].content?.substring(0, 150) + '...'}
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400">
-                    <span>By {posts[0].author || 'Admin'}</span>
-                    <span>•</span>
-                    <span>{new Date(posts[0].createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <Link 
-                    to={`/blog/${posts[0].slug}`}
-                    className="inline-flex items-center text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold transition-colors duration-200 group/link"
+            <div 
+              className="relative bg-white dark:bg-gray-800 shadow-2xl rounded-2xl overflow-hidden group hover:shadow-3xl transition-all duration-500 h-96 md:h-80"
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+            >
+              <AnimatePresence mode="wait">
+                <Link 
+                  to={`/blog/${featuredPosts[currentFeaturedIndex].slug}`}
+                  className="block h-full"
+                >
+                  <motion.div
+                    key={currentFeaturedIndex}
+                    initial={{ opacity: 0, x: 300 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -300 }}
+                    transition={{ 
+                      duration: 0.6,
+                      ease: [0.25, 0.46, 0.45, 0.94]
+                    }}
+                    className="md:flex h-full cursor-pointer"
                   >
-                    Read more
-                    <svg className="ml-2 w-5 h-5 transition-transform duration-200 group-hover/link:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                </div>
+                  <div className="w-full md:w-1/2 relative overflow-hidden h-48 md:h-full">
+                    <LazyImage
+                      src={featuredPosts[currentFeaturedIndex].featuredImage || `https://picsum.photos/600/400?random=${featuredPosts[currentFeaturedIndex].id}`}
+                      alt={featuredPosts[currentFeaturedIndex].title}
+                      blurDataURL={`data:image/svg+xml;base64,${btoa(
+                        `<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="100%" height="100%" fill="#f3f4f6"/>
+                        </svg>`
+                      )}`}
+                      aspectRatio="wide"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent group-hover:from-black/30 transition-all duration-300"></div>
+                    
+                    {/* Post counter */}
+                    <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 text-white text-sm font-medium">
+                      {currentFeaturedIndex + 1} / {featuredPosts.length}
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 p-6 md:p-8 flex flex-col justify-between h-48 md:h-full">
+                    <div className="flex-1">
+                      <div className="mb-3">
+                        {featuredPosts[currentFeaturedIndex].tags && featuredPosts[currentFeaturedIndex].tags.length > 0 && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                            {featuredPosts[currentFeaturedIndex].tags[0]}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-xl md:text-2xl font-bold mb-3 text-gray-900 dark:text-white leading-tight line-clamp-2">
+                        {featuredPosts[currentFeaturedIndex].title}
+                      </h3>
+                      <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 mb-4 leading-relaxed line-clamp-3">
+                        {featuredPosts[currentFeaturedIndex].excerpt || featuredPosts[currentFeaturedIndex].content?.substring(0, 120) + '...'}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="flex items-center space-x-3 text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                        <span>By {featuredPosts[currentFeaturedIndex].author || 'Admin'}</span>
+                        <span>•</span>
+                        <span>{new Date(featuredPosts[currentFeaturedIndex].createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="inline-flex items-center text-indigo-600 dark:text-indigo-400 font-semibold transition-colors duration-200 group/link">
+                        Read more
+                        <svg className="ml-2 w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </Link>
+              </AnimatePresence>
+              
+              {/* Navigation dots */}
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                {featuredPosts.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setCurrentFeaturedIndex(index);
+                      setIsPaused(true);
+                      setTimeout(() => setIsPaused(false), 3000); // Resume after 3 seconds
+                    }}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      index === currentFeaturedIndex
+                        ? 'bg-indigo-500 scale-125'
+                        : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                    }`}
+                  />
+                ))}
               </div>
+              
+              {/* Navigation arrows */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCurrentFeaturedIndex((prev) => 
+                    prev === 0 ? featuredPosts.length - 1 : prev - 1
+                  );
+                  setIsPaused(true);
+                  setTimeout(() => setIsPaused(false), 3000);
+                }}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all duration-300 opacity-0 group-hover:opacity-100"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCurrentFeaturedIndex((prev) => 
+                    (prev + 1) % featuredPosts.length
+                  );
+                  setIsPaused(true);
+                  setTimeout(() => setIsPaused(false), 3000);
+                }}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all duration-300 opacity-0 group-hover:opacity-100"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              
+              {/* Pause indicator */}
+              {isPaused && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 text-white text-sm font-medium flex items-center space-x-2"
+                >
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                  </svg>
+                  <span>Paused</span>
+                </motion.div>
+              )}
             </div>
           </div>
         </section>
@@ -878,175 +1046,20 @@ const Home: React.FC = () => {
               />
             )}
 
-            <div className={`grid gap-8 ${viewMode === 'grid' ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
-              <AnimatePresence mode="wait">
-                {posts.slice(0, showAllPosts ? posts.length : maxHomePosts).map((post, i) => {
-                  const readingTime = estimateReadingTime(post.content || post.excerpt || '');
-                  
-                  return (
-                    <motion.div 
-                      key={post.id}
-                      initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -50, scale: 0.9 }}
-                      transition={{ 
-                        duration: 0.5, 
-                        delay: i * 0.1,
-                        type: "spring",
-                        stiffness: 100,
-                        damping: 15
-                      }}
-                      whileHover={{ 
-                        y: -8, 
-                        scale: 1.02,
-                        rotateY: 5,
-                        transition: { duration: 0.3 }
-                      }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden group cursor-pointer ${
-                        viewMode === 'list' ? 'md:flex md:h-64' : ''
-                      }`}
-                    >
-                    {/* Post Image */}
-                    <div className={`relative overflow-hidden ${viewMode === 'list' ? 'md:w-1/3' : ''}`}>
-                      <img 
-                        src={post.featuredImage || `https://picsum.photos/400/240?random=${post.id}`}
-                        alt={post.title} 
-                        className={`w-full object-cover group-hover:scale-110 transition-transform duration-700 ${
-                          viewMode === 'list' ? 'h-full md:h-64' : 'h-48'
-                        }`}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      
-                      {/* Enhanced Tag overlay */}
-                      {post.tags && post.tags.length > 0 && (
-                        <div className="absolute top-4 left-4">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-sm text-gray-800 shadow-lg">
-                            {post.tags[0]}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Reading Time Badge */}
-                      <div className="absolute top-4 right-4">
-                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-black/50 backdrop-blur-sm text-white">
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          {readingTime} min
-                        </span>
-                      </div>
-
-                      {/* Trending Badge */}
-                      {sortBy === 'trending' && i < 3 && (
-                        <div className="absolute bottom-4 left-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg animate-pulse">
-                            🔥 Trending
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Enhanced Post Content */}
-                    <div className={`p-6 ${viewMode === 'list' ? 'md:flex-1 md:flex md:flex-col md:justify-between' : ''}`}>
-                      <div>
-                        <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300">
-                          <Link to={`/blog/${post.slug}`} className="hover:underline">
-                            {post.title}
-                          </Link>
-                        </h3>
-                        
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-3 leading-relaxed">
-                          {post.excerpt || post.content?.substring(0, 120) + '...'}
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          {/* Author Avatar */}
-                          <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                            {(post.author || 'Admin').charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs font-medium text-gray-900 dark:text-white">
-                              {post.author || 'Admin'}
-                            </span>
-                            <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                              <span>•</span>
-                              <span>{Math.floor(Math.random() * 500) + 50} views</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Action Buttons */}
-                        <div className="flex items-center space-x-2">
-                          {/* Like Button */}
-                          <button 
-                            onClick={(e) => handleLikePost(post.slug, e)}
-                            className="flex items-center space-x-1 px-2 py-1 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-red-500 dark:hover:text-red-400 transition-colors duration-200"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                            </svg>
-                            <span>{post.likes || 0}</span>
-                          </button>
-
-                          {/* Share Button */}
-                          <button className="flex items-center space-x-1 px-2 py-1 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                            </svg>
-                          </button>
-                          
-                          <Link 
-                            to={`/blog/${post.slug}`}
-                            className="inline-flex items-center text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium text-sm transition-colors duration-200 group/link"
-                          >
-                            Read
-                            <svg className="ml-1 w-4 h-4 transition-transform duration-200 group-hover/link:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-              </AnimatePresence>
-
-              {/* Enhanced Loading Skeletons with sophisticated animations */}
-              {loading && [...Array(viewMode === 'grid' ? 4 : 2)].map((_, i) => (
-                <motion.div 
-                  key={`skeleton-${i}`}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: i * 0.1 }}
-                  className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden ${
-                    viewMode === 'list' ? 'md:flex md:h-64' : ''
-                  }`}
-                >
-                  <div className="animate-pulse">
-                    <div className={`bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-[shimmer_2s_infinite] ${
-                      viewMode === 'list' ? 'md:w-1/3 h-full md:h-64' : 'h-48'
-                    }`}></div>
-                    <div className="p-6 space-y-4">
-                      <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-4 rounded w-3/4 animate-[shimmer_2s_infinite_0.5s]"></div>
-                      <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-4 rounded w-1/2 animate-[shimmer_2s_infinite_1s]"></div>
-                      <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-3 rounded w-2/3 animate-[shimmer_2s_infinite_1.5s]"></div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-2">
-                          <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 w-8 h-8 rounded-full animate-[shimmer_2s_infinite_2s]"></div>
-                          <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-3 rounded w-16 animate-[shimmer_2s_infinite_2.5s]"></div>
-                        </div>
-                        <div className="bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 h-3 rounded w-12 animate-[shimmer_2s_infinite_3s]"></div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            <OptimizedBlogGrid
+              posts={postsToDisplay}
+              viewMode={viewMode}
+              onLike={handleLikePost}
+              onShare={(slug, event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                // Add share functionality here
+                console.log('Share post:', slug);
+              }}
+              loading={loading}
+              hasMore={!showAllPosts && posts.length >= maxHomePosts}
+              onLoadMore={handleViewAllPosts}
+            />
 
             {/* View All Posts Button */}
             {!showAllPosts && posts.length >= maxHomePosts && (
@@ -1101,35 +1114,6 @@ const Home: React.FC = () => {
 
           {/* Sidebar */}
           <aside className="space-y-8">
-            {/* Newsletter Subscription */}
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Stay Updated</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  Get the latest cloud tips and updates straight to your inbox. No spam, ever.
-                </p>
-              </div>
-              
-              <form className="space-y-4">
-                <input 
-                  type="email" 
-                  placeholder="Enter your email" 
-                  className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200" 
-                />
-                <button 
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
-                >
-                  Subscribe
-                </button>
-              </form>
-            </div>
-
             {/* Trending Posts */}
             <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700">
               <div className="flex items-center mb-6">

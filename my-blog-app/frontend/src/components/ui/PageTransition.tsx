@@ -9,39 +9,44 @@ interface PageTransitionProps {
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: 30,
-    scale: 0.95,
-    rotateX: 5
+    y: 20,
+    scale: 0.98
   },
   in: {
     opacity: 1,
     y: 0,
-    scale: 1,
-    rotateX: 0
+    scale: 1
   },
   out: {
     opacity: 0,
-    y: -30,
-    scale: 1.05,
-    rotateX: -5
+    y: -20,
+    scale: 1.02
   }
+};
+
+const pageTransition = {
+  type: "spring",
+  stiffness: 100,
+  damping: 25,
+  duration: 0.6,
+  ease: [0.25, 0.46, 0.45, 0.94]
 };
 
 const containerVariants = {
   initial: {
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.05
     }
   },
   in: {
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2
+      staggerChildren: 0.08,
+      delayChildren: 0.1
     }
   },
   out: {
     transition: {
-      staggerChildren: 0.05,
+      staggerChildren: 0.03,
       staggerDirection: -1
     }
   }
@@ -76,10 +81,7 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children, className = '
     >
       <motion.div
         variants={pageVariants}
-        transition={{ 
-          duration: 0.5,
-          ease: [0.22, 1, 0.36, 1] // Custom cubic-bezier for smooth animation
-        }}
+        transition={pageTransition}
       >
         {children}
       </motion.div>

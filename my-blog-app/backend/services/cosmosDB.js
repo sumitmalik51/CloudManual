@@ -8,6 +8,8 @@ class CosmosDBService {
     this.isConnected = false;
     // Track recent view increments to prevent duplicates
     this.recentViewIncrements = new Map();
+    // Track recent like increments separately
+    this.recentLikeIncrements = new Map();
     this.viewIncrementCooldown = 5000; // 5 seconds cooldown
   }
 
@@ -126,6 +128,12 @@ class CosmosDBService {
 
   async getAllPosts(options = {}) {
     try {
+      // Ensure we're connected to the database
+      if (!this.isConnected || !this.container) {
+        console.log('Database not connected, attempting to connect...');
+        await this.connect();
+      }
+
       const {
         status = null,
         limit = 10,
@@ -171,12 +179,23 @@ class CosmosDBService {
       query += ` OFFSET ${offset} LIMIT ${limit}`;
 
       const querySpec = { query, parameters };
-      const { resources } = await this.container.items.query(querySpec).fetchAll();
-
-      return resources;
+      console.log('Executing query:', query);
+      console.log('With parameters:', parameters);
+      
+      const response = await this.container.items.query(querySpec).fetchAll();
+      console.log('Query response:', response);
+      
+      if (!response || !response.resources) {
+        console.log('No resources found in response, returning empty array');
+        return [];
+      }
+      
+      return response.resources;
     } catch (error) {
       console.error('Error getting posts:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent the frontend from breaking
+      console.log('Returning empty array due to error');
+      return [];
     }
   }
 
@@ -255,6 +274,12 @@ class CosmosDBService {
 
   async getPostCount(status = null) {
     try {
+      // Ensure we're connected to the database
+      if (!this.isConnected || !this.container) {
+        console.log('Database not connected, attempting to connect...');
+        await this.connect();
+      }
+
       let query = 'SELECT VALUE COUNT(1) FROM c WHERE c.type = @type';
       const parameters = [{ name: '@type', value: 'post' }];
 
@@ -269,7 +294,9 @@ class CosmosDBService {
       return resources[0] || 0;
     } catch (error) {
       console.error('Error getting post count:', error);
-      throw error;
+      // Return 0 instead of throwing to prevent breaking pagination
+      console.log('Returning 0 due to error');
+      return 0;
     }
   }
 
@@ -279,7 +306,7 @@ class CosmosDBService {
       
       // Check if we recently incremented likes for this post
       const now = Date.now();
-      const lastIncrement = this.recentViewIncrements.get(`likes_${postSlug}`);
+      const lastIncrement = this.recentLikeIncrements.get(postSlug);
       
       if (lastIncrement && (now - lastIncrement) < this.viewIncrementCooldown) {
         console.log(`Like increment skipped for ${postSlug} - within cooldown period`);
@@ -309,7 +336,7 @@ class CosmosDBService {
       await this.container.item(post.id, post.type).replace(updatedPost);
       
       // Track this increment
-      this.recentViewIncrements.set(`likes_${postSlug}`, now);
+      this.recentLikeIncrements.set(postSlug, now);
       
       console.log(`Successfully incremented likes to ${newLikes} for post: ${post.title}`);
       
@@ -339,7 +366,8 @@ class CosmosDBService {
       const post = await this.getPostBySlug(postSlug);
       
       if (!post) {
-        throw new Error('Post not found for view increment');
+        console.log(`Post with slug ${postSlug} not found, skipping view increment`);
+        return 0; // Return 0 instead of throwing error
       }
 
       const newViews = (post.views || 0) + 1;
@@ -370,7 +398,21 @@ class CosmosDBService {
       return newViews;
     } catch (error) {
       console.error('Error incrementing views:', error);
-      throw error;
+      
+      // If it's a CosmosDB "not found" error, return the current views or 0
+      if (error.code === 404 || error.message.includes('does not exist')) {
+        console.log(`Post document not found in CosmosDB, returning 0 views for ${postSlug}`);
+        return 0;
+      }
+      
+      // For other errors, still try to return the current view count if possible
+      try {
+        const post = await this.getPostBySlug(postSlug);
+        return post ? post.views || 0 : 0;
+      } catch (fallbackError) {
+        console.error('Fallback view count retrieval failed:', fallbackError);
+        return 0; // Return 0 as last resort instead of throwing
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/layout/AdminLayout';
 import { formatDate } from '../utils/helpers';
@@ -41,17 +41,7 @@ const AdminPosts: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      navigate('/admin/login');
-      return;
-    }
-
-    fetchPosts();
-  }, [navigate, currentPage, searchTerm, statusFilter, sortBy, sortOrder]);
-
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('adminToken');
@@ -89,7 +79,17 @@ const AdminPosts: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, statusFilter, sortBy, sortOrder]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      navigate('/admin/login');
+      return;
+    }
+
+    fetchPosts();
+  }, [navigate, fetchPosts]);
 
   const handleDelete = async (postId: string) => {
     if (!window.confirm('Are you sure you want to delete this post?')) {

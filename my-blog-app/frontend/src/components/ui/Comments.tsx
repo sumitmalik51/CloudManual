@@ -15,7 +15,7 @@ interface CommentsProps {
   postId?: string;
 }
 
-const Comments: React.FC<CommentsProps> = ({ postId: _postId }) => {
+const Comments: React.FC<CommentsProps> = () => {
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { blogAPI } from '../utils/api';
+import type { Post } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
 
 interface UseHomeDataOptions {
@@ -9,8 +10,8 @@ interface UseHomeDataOptions {
 }
 
 export const useHomeData = ({ category, showAllPosts, maxHomePosts }: UseHomeDataOptions) => {
-  const [posts, setPosts] = useState<any[]>([]);
-  const [allPosts, setAllPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({

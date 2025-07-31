@@ -1,60 +1,11 @@
-import { useState, useEffect } from 'react';
-
-export function useDarkMode() {
-  const [isDark, setIsDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  // Initialize dark mode after component mounts to avoid hydration issues
-  useEffect(() => {
-    setMounted(true);
-    
-    // Check stored preference or system preference
-    const stored = localStorage.getItem('darkMode');
-    if (stored !== null) {
-      setIsDark(JSON.parse(stored));
-    } else {
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDark(systemPrefersDark);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    
-    // Apply dark mode class to document
-    const root = document.documentElement;
-    const body = document.body;
-    
-    if (isDark) {
-      root.classList.add('dark');
-      body.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-      body.classList.remove('dark');
-    }
-    
-    // Store preference
-    localStorage.setItem('darkMode', JSON.stringify(isDark));
-    
-    // Dispatch custom event for other components to listen
-    window.dispatchEvent(new CustomEvent('darkModeChange', { detail: { isDark } }));
-  }, [isDark, mounted]);
-
-  const toggleDarkMode = () => {
-    if (mounted) {
-      setIsDark(!isDark);
-    }
-  };
-
-  return { isDark, toggleDarkMode, mounted };
-}
+import { useDarkMode } from '../../hooks/useDarkMode';
 
 interface DarkModeToggleProps {
   className?: string;
 }
 
 export default function DarkModeToggle({ className = '' }: DarkModeToggleProps) {
-  const { isDark, toggleDarkMode, mounted } = useDarkMode();
+  const { isDark, toggle, mounted } = useDarkMode();
 
   // Avoid hydration mismatch by not rendering until mounted
   if (!mounted) {
@@ -65,7 +16,7 @@ export default function DarkModeToggle({ className = '' }: DarkModeToggleProps) 
 
   return (
     <button
-      onClick={toggleDarkMode}
+      onClick={toggle}
       className={`group relative inline-flex items-center justify-center w-14 h-7 bg-gray-200 dark:bg-gray-700 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:shadow-lg hover:scale-105 ${className}`}
       title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
       aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}

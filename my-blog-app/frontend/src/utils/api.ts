@@ -51,6 +51,7 @@ export interface Post {
   content: string;
   excerpt: string;
   author: string;
+  authorSlug?: string;
   tags: string[];
   category?: string;
   status: 'published' | 'draft';
@@ -68,6 +69,34 @@ export interface Post {
   _etag?: string;
   _attachments?: string;
   _ts?: number;
+}
+
+export interface Author {
+  id: string;
+  name: string;
+  slug: string;
+  email: string;
+  bio: string;
+  avatar?: string;
+  jobTitle?: string;
+  company?: string;
+  location?: string;
+  website?: string;
+  socialLinks: {
+    twitter?: string;
+    linkedin?: string;
+    github?: string;
+    youtube?: string;
+    instagram?: string;
+  };
+  expertise: string[];
+  isActive: boolean;
+  postCount: number;
+  totalViews: number;
+  totalLikes: number;
+  joinedDate: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PostsResponse {
@@ -227,6 +256,30 @@ export const blogAPI = {
 
   getStats: async (): Promise<StatsResponse> => {
     const response = await api.get('/posts/admin/analytics');
+    return response.data;
+  },
+
+  // Author APIs
+  getAuthors: async (params?: {
+    page?: number;
+    limit?: number;
+    includeInactive?: boolean;
+  }): Promise<{ authors: Author[]; pagination: any }> => {
+    const response = await api.get('/authors', { params });
+    return response.data;
+  },
+
+  getAuthorBySlug: async (slug: string): Promise<Author> => {
+    const response = await api.get(`/authors/${slug}`);
+    return response.data;
+  },
+
+  getAuthorPosts: async (authorSlug: string, params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<{ posts: Post[]; pagination: any }> => {
+    const response = await api.get(`/authors/${authorSlug}/posts`, { params });
     return response.data;
   },
 

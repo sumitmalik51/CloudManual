@@ -51,14 +51,14 @@ const Header: React.FC = () => {
                 <div className="flex flex-col">
                   <span className={`text-2xl font-black transition-all duration-500 tracking-tight ${
                     isAtTop 
-                      ? 'text-white dark:text-white group-hover:text-blue-200 drop-shadow-lg' 
+                      ? 'text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-200 drop-shadow-lg' 
                       : 'text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400'
                   }`}>
                     CloudManual
                   </span>
                   <span className={`text-xs font-medium tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-1 group-hover:translate-y-0 ${
                     isAtTop 
-                      ? 'text-white/80 dark:text-white/80 drop-shadow-md' 
+                      ? 'text-gray-700 dark:text-white/80 drop-shadow-md' 
                       : 'text-gray-500 dark:text-gray-400'
                   }`}>
                     Cloud • AI • DevOps
@@ -76,7 +76,7 @@ const Header: React.FC = () => {
                     isActiveLink('/') 
                       ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/25' 
                       : isAtTop
-                        ? 'text-white dark:text-white hover:text-blue-200 dark:hover:text-blue-200 hover:bg-white/10 dark:hover:bg-white/10 drop-shadow-md'
+                        ? 'text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-200 hover:bg-white/90 dark:hover:bg-white/10 drop-shadow-md bg-white/80 dark:bg-transparent'
                         : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
                 >
@@ -84,7 +84,7 @@ const Header: React.FC = () => {
                   {!isActiveLink('/') && (
                     <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                       isAtTop 
-                        ? 'bg-white/20'
+                        ? 'bg-white/20 dark:bg-white/20'
                         : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10'
                     }`}></div>
                   )}
@@ -95,7 +95,7 @@ const Header: React.FC = () => {
                     isActiveLink('/blog') 
                       ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/25' 
                       : isAtTop
-                        ? 'text-white dark:text-white hover:text-blue-200 dark:hover:text-blue-200 hover:bg-white/10 dark:hover:bg-white/10 drop-shadow-md'
+                        ? 'text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-200 hover:bg-white/90 dark:hover:bg-white/10 drop-shadow-md bg-white/80 dark:bg-transparent'
                         : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
                 >
@@ -103,7 +103,7 @@ const Header: React.FC = () => {
                   {!isActiveLink('/blog') && (
                     <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                       isAtTop 
-                        ? 'bg-white/20'
+                        ? 'bg-white/20 dark:bg-white/20'
                         : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10'
                     }`}></div>
                   )}
@@ -114,7 +114,7 @@ const Header: React.FC = () => {
                     isActiveLink('/about') 
                       ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/25' 
                       : isAtTop
-                        ? 'text-white dark:text-white hover:text-blue-200 dark:hover:text-blue-200 hover:bg-white/10 dark:hover:bg-white/10 drop-shadow-md'
+                        ? 'text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-200 hover:bg-white/90 dark:hover:bg-white/10 drop-shadow-md bg-white/80 dark:bg-transparent'
                         : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
                 >
@@ -122,7 +122,7 @@ const Header: React.FC = () => {
                   {!isActiveLink('/about') && (
                     <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                       isAtTop 
-                        ? 'bg-white/20'
+                        ? 'bg-white/20 dark:bg-white/20'
                         : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10'
                     }`}></div>
                   )}
@@ -133,7 +133,7 @@ const Header: React.FC = () => {
                     isActiveLink('/contact') 
                       ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/25' 
                       : isAtTop
-                        ? 'text-white dark:text-white hover:text-blue-200 dark:hover:text-blue-200 hover:bg-white/10 dark:hover:bg-white/10 drop-shadow-md'
+                        ? 'text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-200 hover:bg-white/90 dark:hover:bg-white/10 drop-shadow-md bg-white/80 dark:bg-transparent'
                         : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
                 >
@@ -141,7 +141,7 @@ const Header: React.FC = () => {
                   {!isActiveLink('/contact') && (
                     <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                       isAtTop 
-                        ? 'bg-white/20'
+                        ? 'bg-white/20 dark:bg-white/20'
                         : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10'
                     }`}></div>
                   )}

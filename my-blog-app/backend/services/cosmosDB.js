@@ -59,6 +59,7 @@ class CosmosDBService {
         content: postData.content,
         excerpt: postData.excerpt,
         author: postData.author,
+        authorSlug: postData.authorSlug,
         status: postData.status || 'draft',
         slug: postData.slug,
         tags: postData.tags || [],
@@ -173,8 +174,11 @@ class CosmosDBService {
         category = null
       } = options;
 
-      let query = 'SELECT * FROM c WHERE c.type = @type';
-      const parameters = [{ name: '@type', value: 'post' }];
+      let query = 'SELECT * FROM c WHERE c.type = @type AND (NOT IS_DEFINED(c.status) OR c.status != @deletedStatus)';
+      const parameters = [
+        { name: '@type', value: 'post' },
+        { name: '@deletedStatus', value: 'deleted' }
+      ];
 
       // Add status filter
       if (status) {
@@ -238,10 +242,6 @@ class CosmosDBService {
       }
 
       console.log(`Found post to update: ${existingPost.title}`);
-      console.log(`Document keys: ${Object.keys(existingPost)}`);
-      console.log(`Document id field: ${existingPost.id}`);
-      console.log(`Document _rid field: ${existingPost._rid}`);
-      console.log(`Document _self field: ${existingPost._self}`);
 
       const updatedPost = {
         ...existingPost,
@@ -249,17 +249,47 @@ class CosmosDBService {
         updatedAt: new Date().toISOString()
       };
 
-      // Try to use the _rid or _self from the document for the update
-      // First, let's see all the internal Cosmos DB fields
-      console.log(`All document fields: ${JSON.stringify(existingPost, null, 2)}`);
+      // Remove Cosmos DB internal fields that shouldn't be in the update
+      delete updatedPost._rid;
+      delete updatedPost._self;
+      delete updatedPost._etag;
+      delete updatedPost._attachments;
+      delete updatedPost._ts;
 
-      // Use the document's internal Cosmos DB id from the fetched document
-      const cosmosId = existingPost.id; // This should be the internal Cosmos DB id
-      console.log(`Using Cosmos DB internal id for update: ${cosmosId}`);
+      console.log(`Updating post with id: ${existingPost.id} and partition key: ${existingPost.type}`);
 
-      const { resource } = await this.container.item(cosmosId, existingPost.type).replace(updatedPost);
-      console.log(`Successfully updated post: ${cosmosId}`);
-      return resource;
+      // Use adaptive partition key strategy - try multiple approaches
+      let updateResult = null;
+      const updateErrors = [];
+
+      // Strategy 1: Use the document's exact partition key value
+      try {
+        const { resource } = await this.container.item(existingPost.id, existingPost.type).replace(updatedPost);
+        updateResult = resource;
+        console.log(`✅ Successfully updated post using strategy 1: ${existingPost.id}`);
+      } catch (error) {
+        updateErrors.push(`Strategy 1 failed: ${error.message}`);
+        console.log(`Strategy 1 failed, error: ${error.message}`);
+      }
+
+      // Strategy 2: If strategy 1 fails, try using upsert with create semantics
+      if (!updateResult) {
+        try {
+          const { resource } = await this.container.items.upsert(updatedPost);
+          updateResult = resource;
+          console.log(`✅ Successfully updated post using strategy 2 (upsert): ${existingPost.id}`);
+        } catch (error) {
+          updateErrors.push(`Strategy 2 failed: ${error.message}`);
+          console.log(`Strategy 2 failed, error: ${error.message}`);
+        }
+      }
+
+      if (!updateResult) {
+        console.error(`All update strategies failed for post ${id}:`, updateErrors);
+        throw new Error(`Failed to update post after trying multiple strategies: ${updateErrors.join('; ')}`);
+      }
+
+      return updateResult;
     } catch (error) {
       console.error(`Error updating post ${id}:`, error.message);
       if (error.message === 'Post not found') {
@@ -281,18 +311,161 @@ class CosmosDBService {
       }
       
       console.log(`Found post to delete: ${postToDelete.title}, partition key: ${postToDelete.type}`);
-      console.log(`Full post object keys: ${Object.keys(postToDelete)}`);
-      console.log(`Post internal id: ${postToDelete.id}, Post custom id: ${postToDelete.id}`);
-      
-      // Use the document's internal id from Cosmos DB, not our custom id field
-      const cosmosId = postToDelete.id; // This should be the internal Cosmos DB id
-      console.log(`Using Cosmos DB internal id for deletion: ${cosmosId}`);
-      
-      await this.container.item(cosmosId, postToDelete.type).delete();
-      console.log(`Successfully deleted post: ${cosmosId}`);
-      return { success: true };
+
+      // Use adaptive partition key strategy - try multiple approaches
+      let deleteSuccess = false;
+      const deleteErrors = [];
+
+      // Strategy 1: Use the document's exact partition key value
+      try {
+        await this.container.item(postToDelete.id, postToDelete.type).delete();
+        deleteSuccess = true;
+        console.log(`✅ Successfully deleted post using strategy 1: ${postToDelete.id}`);
+      } catch (error) {
+        deleteErrors.push(`Strategy 1 failed: ${error.message}`);
+        console.log(`Strategy 1 failed, error: ${error.message}`);
+      }
+
+      // Strategy 2: If strategy 1 fails, try querying and deleting through query
+      if (!deleteSuccess) {
+        try {
+          const querySpec = {
+            query: 'SELECT * FROM c WHERE c.id = @id AND c.type = @type',
+            parameters: [
+              { name: '@id', value: id },
+              { name: '@type', value: 'post' }
+            ]
+          };
+          
+          const { resources } = await this.container.items.query(querySpec).fetchAll();
+          if (resources.length > 0) {
+            const docToDelete = resources[0];
+            await this.container.item(docToDelete.id, docToDelete.type).delete();
+            deleteSuccess = true;
+            console.log(`✅ Successfully deleted post using strategy 2 (query-based): ${docToDelete.id}`);
+          } else {
+            deleteErrors.push(`Strategy 2 failed: Document not found through query`);
+          }
+        } catch (error) {
+          deleteErrors.push(`Strategy 2 failed: ${error.message}`);
+          console.log(`Strategy 2 failed, error: ${error.message}`);
+        }
+      }
+
+      // Strategy 3: Alternative partition key approach - try with different partition key values
+      if (!deleteSuccess) {
+        try {
+          console.log('Attempting Strategy 3: Alternative partition key approaches...');
+          
+          // Try with undefined partition key
+          try {
+            await this.container.item(postToDelete.id, undefined).delete();
+            deleteSuccess = true;
+            console.log(`✅ Successfully deleted post using strategy 3a (undefined partition): ${postToDelete.id}`);
+          } catch (error) {
+            console.log(`Strategy 3a failed: ${error.message}`);
+          }
+
+          // If still not successful, try with the document's id as partition key
+          if (!deleteSuccess) {
+            try {
+              await this.container.item(postToDelete.id, postToDelete.id).delete();
+              deleteSuccess = true;
+              console.log(`✅ Successfully deleted post using strategy 3b (id as partition): ${postToDelete.id}`);
+            } catch (error) {
+              console.log(`Strategy 3b failed: ${error.message}`);
+            }
+          }
+
+          // If still not successful, try with slug as partition key
+          if (!deleteSuccess && postToDelete.slug) {
+            try {
+              await this.container.item(postToDelete.id, postToDelete.slug).delete();
+              deleteSuccess = true;
+              console.log(`✅ Successfully deleted post using strategy 3c (slug as partition): ${postToDelete.id}`);
+            } catch (error) {
+              console.log(`Strategy 3c failed: ${error.message}`);
+            }
+          }
+
+          if (!deleteSuccess) {
+            deleteErrors.push(`Strategy 3 failed: All alternative partition key approaches failed`);
+          }
+        } catch (error) {
+          deleteErrors.push(`Strategy 3 failed: ${error.message}`);
+          console.log(`Strategy 3 failed, error: ${error.message}`);
+        }
+      }
+
+      // Strategy 4: Replace with empty document then delete (replacement approach)
+      if (!deleteSuccess) {
+        try {
+          console.log('Attempting Strategy 4: Replace and delete approach...');
+          
+          // Create a minimal document to replace the existing one
+          const replacementDoc = {
+            id: postToDelete.id,
+            type: 'post',
+            title: '',
+            content: '',
+            status: 'deleted',
+            deletedAt: new Date().toISOString()
+          };
+
+          // Replace the document first
+          await this.container.items.upsert(replacementDoc);
+          console.log('Document replaced with minimal version');
+
+          // Now try to delete the minimal document
+          await this.container.item(replacementDoc.id, replacementDoc.type).delete();
+          deleteSuccess = true;
+          console.log(`✅ Successfully deleted post using strategy 4 (replace then delete): ${postToDelete.id}`);
+        } catch (error) {
+          deleteErrors.push(`Strategy 4 failed: ${error.message}`);
+          console.log(`Strategy 4 failed, error: ${error.message}`);
+        }
+      }
+
+      // Strategy 5: ONLY if all hard delete strategies fail, fall back to soft delete
+      if (!deleteSuccess) {
+        try {
+          console.log('🔄 All hard delete strategies failed. Falling back to soft delete...');
+          
+          const softDeletedPost = {
+            ...postToDelete,
+            status: 'deleted',
+            deletedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+
+          // Remove CosmosDB internal fields to avoid conflicts
+          delete softDeletedPost._rid;
+          delete softDeletedPost._self;
+          delete softDeletedPost._etag;
+          delete softDeletedPost._attachments;
+          delete softDeletedPost._ts;
+
+          // Use upsert to "soft delete" the post
+          await this.container.items.upsert(softDeletedPost);
+          deleteSuccess = true;
+          console.log(`⚠️ Post soft-deleted (marked as deleted): ${id}`);
+          console.log('⚠️ NOTE: This is a fallback - post still exists in database');
+            
+          return { success: true, method: 'soft-delete', message: 'Post marked as deleted (fallback method)' };
+        } catch (error) {
+          deleteErrors.push(`Strategy 5 (soft delete) failed: ${error.message}`);
+          console.log(`Strategy 5 failed, error: ${error.message}`);
+        }
+      }
+
+      if (!deleteSuccess) {
+        console.error(`All delete strategies failed for post ${id}:`, deleteErrors);
+        throw new Error(`Failed to delete post after trying all strategies: ${deleteErrors.join('; ')}`);
+      }
+
+      return { success: true, method: 'hard-delete', message: 'Post permanently deleted' };
     } catch (error) {
-      console.error(`Error deleting post ${id}:`, error.message, error.stack);
+      console.error(`Error deleting post ${id}:`, error.message);
       if (error.message === 'Post not found') {
         throw error;
       }
@@ -380,9 +553,17 @@ class CosmosDBService {
         let response;
         try {
           response = await this.container.item(post.id).replace(updatedPost);
+          console.log(`✅ Successfully incremented likes using direct approach: ${post.id}`);
         } catch (noPartitionError) {
           console.log('Like update without partition key failed, trying with partition key...');
-          response = await this.container.item(post.id, post.type).replace(updatedPost);
+          try {
+            response = await this.container.item(post.id, post.type).replace(updatedPost);
+            console.log(`✅ Successfully incremented likes using partition key approach: ${post.id}`);
+          } catch (partitionError) {
+            console.log('Like update with partition key also failed, trying upsert...');
+            response = await this.container.items.upsert(updatedPost);
+            console.log(`✅ Successfully incremented likes using upsert approach: ${post.id}`);
+          }
         }
         
         // Track this increment
@@ -513,9 +694,17 @@ class CosmosDBService {
         let response;
         try {
           response = await this.container.item(post.id).replace(updatedPost);
+          console.log(`✅ Successfully incremented views using direct approach: ${post.id}`);
         } catch (noPartitionError) {
           console.log('Update without partition key failed, trying with partition key...');
-          response = await this.container.item(post.id, post.type).replace(updatedPost);
+          try {
+            response = await this.container.item(post.id, post.type).replace(updatedPost);
+            console.log(`✅ Successfully incremented views using partition key approach: ${post.id}`);
+          } catch (partitionError) {
+            console.log('Update with partition key also failed, trying upsert...');
+            response = await this.container.items.upsert(updatedPost);
+            console.log(`✅ Successfully incremented views using upsert approach: ${post.id}`);
+          }
         }
         
         // Track this increment
@@ -643,8 +832,53 @@ class CosmosDBService {
           
           for (const postToDelete of postsToDelete) {
             console.log(`  Deleting: ${postToDelete.id} (${postToDelete.createdAt})`);
-            await this.container.item(postToDelete.id, postToDelete.type).delete();
-            totalCleaned++;
+            
+            // Use adaptive delete strategy
+            let deleteSuccess = false;
+            const deleteErrors = [];
+
+            // Strategy 1: Direct partition key approach
+            try {
+              await this.container.item(postToDelete.id, postToDelete.type).delete();
+              deleteSuccess = true;
+              console.log(`✅ Successfully deleted duplicate post using strategy 1: ${postToDelete.id}`);
+            } catch (error) {
+              deleteErrors.push(`Strategy 1 failed: ${error.message}`);
+              console.log(`Strategy 1 failed for duplicate post ${postToDelete.id}, error: ${error.message}`);
+            }
+
+            // Strategy 2: Query-based approach if strategy 1 fails
+            if (!deleteSuccess) {
+              try {
+                const querySpec = {
+                  query: 'SELECT * FROM c WHERE c.id = @id AND c.type = @type',
+                  parameters: [
+                    { name: '@id', value: postToDelete.id },
+                    { name: '@type', value: 'post' }
+                  ]
+                };
+                
+                const { resources } = await this.container.items.query(querySpec).fetchAll();
+                if (resources.length > 0) {
+                  const docToDelete = resources[0];
+                  await this.container.item(docToDelete.id, docToDelete.type).delete();
+                  deleteSuccess = true;
+                  console.log(`✅ Successfully deleted duplicate post using strategy 2: ${docToDelete.id}`);
+                } else {
+                  deleteErrors.push(`Strategy 2 failed: Document not found through query`);
+                }
+              } catch (error) {
+                deleteErrors.push(`Strategy 2 failed: ${error.message}`);
+                console.log(`Strategy 2 failed for duplicate post ${postToDelete.id}, error: ${error.message}`);
+              }
+            }
+
+            if (deleteSuccess) {
+              totalCleaned++;
+            } else {
+              console.error(`❌ Failed to delete duplicate post ${postToDelete.id} after trying all strategies:`, deleteErrors);
+              // Continue with other posts instead of failing completely
+            }
           }
         }
       }
@@ -656,6 +890,201 @@ class CosmosDBService {
     } catch (error) {
       console.error('Error during duplicate cleanup:', error);
       throw error;
+    }
+  }
+
+  // === AUTHOR METHODS ===
+
+  async createAuthor(authorData) {
+    try {
+      const authorDocument = {
+        id: this.generateId(),
+        type: 'author',
+        name: authorData.name,
+        slug: this.generateSlug(authorData.name),
+        email: authorData.email,
+        bio: authorData.bio || '',
+        avatar: authorData.avatar || '',
+        jobTitle: authorData.jobTitle || '',
+        company: authorData.company || '',
+        location: authorData.location || '',
+        website: authorData.website || '',
+        socialLinks: {
+          twitter: authorData.socialLinks?.twitter || '',
+          linkedin: authorData.socialLinks?.linkedin || '',
+          github: authorData.socialLinks?.github || '',
+          youtube: authorData.socialLinks?.youtube || '',
+          instagram: authorData.socialLinks?.instagram || ''
+        },
+        expertise: authorData.expertise || [],
+        isActive: authorData.isActive !== undefined ? authorData.isActive : true,
+        postCount: 0,
+        totalViews: 0,
+        totalLikes: 0,
+        joinedDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const { resource } = await this.container.items.create(authorDocument);
+      console.log('Author created successfully:', resource.name);
+      return resource;
+    } catch (error) {
+      console.error('Error creating author:', error);
+      throw error;
+    }
+  }
+
+  async getAllAuthors(options = {}) {
+    try {
+      const {
+        limit = 50,
+        offset = 0,
+        includeInactive = false
+      } = options;
+
+      let query = 'SELECT * FROM c WHERE c.type = @type';
+      const parameters = [{ name: '@type', value: 'author' }];
+
+      if (!includeInactive) {
+        query += ' AND c.isActive = @isActive';
+        parameters.push({ name: '@isActive', value: true });
+      }
+
+      query += ' ORDER BY c.createdAt DESC';
+
+      if (limit > 0) {
+        query += ` OFFSET ${offset} LIMIT ${limit}`;
+      }
+
+      const querySpec = { query, parameters };
+      const { resources } = await this.container.items.query(querySpec).fetchAll();
+
+      return resources;
+    } catch (error) {
+      console.error('Error fetching authors:', error);
+      throw error;
+    }
+  }
+
+  async getAuthorBySlug(slug) {
+    try {
+      const querySpec = {
+        query: 'SELECT * FROM c WHERE c.slug = @slug AND c.type = @type',
+        parameters: [
+          { name: '@slug', value: slug },
+          { name: '@type', value: 'author' }
+        ]
+      };
+
+      const { resources } = await this.container.items.query(querySpec).fetchAll();
+      return resources.length > 0 ? resources[0] : null;
+    } catch (error) {
+      console.error('Error getting author by slug:', error);
+      throw error;
+    }
+  }
+
+  async getAuthorById(id) {
+    try {
+      const { resource } = await this.container.item(id, 'author').read();
+      return resource;
+    } catch (error) {
+      if (error.code === 404) {
+        return null;
+      }
+      console.error('Error getting author by ID:', error);
+      throw error;
+    }
+  }
+
+  async updateAuthor(id, updateData) {
+    try {
+      const existingAuthor = await this.getAuthorById(id);
+      if (!existingAuthor) {
+        throw new Error('Author not found');
+      }
+
+      const updatedAuthor = {
+        ...existingAuthor,
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      };
+
+      // If name is updated, regenerate slug
+      if (updateData.name && updateData.name !== existingAuthor.name) {
+        updatedAuthor.slug = this.generateSlug(updateData.name);
+      }
+
+      const { resource } = await this.container.item(id, 'author').replace(updatedAuthor);
+      console.log('Author updated successfully:', resource.name);
+      return resource;
+    } catch (error) {
+      console.error('Error updating author:', error);
+      throw error;
+    }
+  }
+
+  async getPostsByAuthor(authorSlug, options = {}) {
+    try {
+      const {
+        limit = 10,
+        offset = 0,
+        status = 'published'
+      } = options;
+
+      let query = 'SELECT * FROM c WHERE c.type = @type AND c.authorSlug = @authorSlug';
+      const parameters = [
+        { name: '@type', value: 'post' },
+        { name: '@authorSlug', value: authorSlug }
+      ];
+
+      if (status) {
+        query += ' AND c.status = @status';
+        parameters.push({ name: '@status', value: status });
+      }
+
+      query += ' ORDER BY c.createdAt DESC';
+
+      if (limit > 0) {
+        query += ` OFFSET ${offset} LIMIT ${limit}`;
+      }
+
+      const querySpec = { query, parameters };
+      const { resources } = await this.container.items.query(querySpec).fetchAll();
+
+      return resources;
+    } catch (error) {
+      console.error('Error getting posts by author:', error);
+      throw error;
+    }
+  }
+
+  async updateAuthorStats(authorSlug) {
+    try {
+      const author = await this.getAuthorBySlug(authorSlug);
+      if (!author) {
+        console.log(`Author with slug ${authorSlug} not found for stats update`);
+        return;
+      }
+
+      // Get all published posts by this author
+      const posts = await this.getPostsByAuthor(authorSlug, { status: 'published', limit: 0 });
+      
+      const postCount = posts.length;
+      const totalViews = posts.reduce((sum, post) => sum + (post.views || 0), 0);
+      const totalLikes = posts.reduce((sum, post) => sum + (post.likes || 0), 0);
+
+      // Update author stats
+      await this.updateAuthor(author.id, {
+        postCount,
+        totalViews,
+        totalLikes
+      });
+
+      console.log(`Updated stats for author ${author.name}: ${postCount} posts, ${totalViews} views, ${totalLikes} likes`);
+    } catch (error) {
+      console.error('Error updating author stats:', error);
     }
   }
 }

@@ -21,7 +21,11 @@ app.use('/api/', limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174'
+  ],
   credentials: true
 }));
 
@@ -45,6 +49,7 @@ connectDB();
 
 // Routes
 app.use('/api/posts', require('./routes/posts-cosmos'));
+app.use('/api/authors', require('./routes/authors'));
 
 // Basic auth middleware (simple password-based for now)
 const basicAuth = (req, res, next) => {

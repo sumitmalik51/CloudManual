@@ -297,6 +297,7 @@ router.post('/admin', authenticateToken, async (req, res) => {
       content,
       excerpt,
       author = 'Admin',
+      authorSlug,
       status = 'draft',
       tags = [],
       metaTitle,
@@ -327,6 +328,7 @@ router.post('/admin', authenticateToken, async (req, res) => {
       content,
       excerpt: excerpt || content.substring(0, 200) + '...',
       author,
+      authorSlug,
       status,
       slug,
       tags,
@@ -358,6 +360,7 @@ router.put('/admin/:id', authenticateToken, async (req, res) => {
       content,
       excerpt,
       author,
+      authorSlug,
       status,
       tags,
       metaTitle,
@@ -383,6 +386,7 @@ router.put('/admin/:id', authenticateToken, async (req, res) => {
     if (content !== undefined) updateData.content = content;
     if (excerpt !== undefined) updateData.excerpt = excerpt;
     if (author !== undefined) updateData.author = author;
+    if (authorSlug !== undefined) updateData.authorSlug = authorSlug;
     if (status !== undefined) updateData.status = status;
     if (tags !== undefined) updateData.tags = tags;
     if (metaTitle !== undefined) updateData.metaTitle = metaTitle;
@@ -407,10 +411,15 @@ router.put('/admin/:id', authenticateToken, async (req, res) => {
 // DELETE /api/posts/admin/:id - Delete a blog post (protected)
 router.delete('/admin/:id', authenticateToken, async (req, res) => {
   try {
-    await cosmosDB.deletePost(req.params.id);
+    const deleteResult = await cosmosDB.deletePost(req.params.id);
+    
+    // Log the delete result to see which method was used
+    console.log('🗑️ Delete result:', deleteResult);
     
     res.json({
-      message: 'Post deleted successfully'
+      message: 'Post deleted successfully',
+      method: deleteResult.method || 'unknown',
+      details: deleteResult.message || 'Post deleted'
     });
   } catch (error) {
     console.error('Error deleting post:', error);

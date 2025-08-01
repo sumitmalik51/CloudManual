@@ -9,12 +9,14 @@ import PageTransition from '../components/ui/PageTransition';
 import ReadingProgressBar from '../components/ui/ReadingProgressBar';
 import ReadingEngagement from '../components/ui/ReadingEngagement';
 import Comments from '../components/ui/Comments';
-import { blogAPI, type Post } from '../utils/api';
+import AuthorCard from '../components/ui/AuthorCard';
+import { blogAPI, type Post, type Author } from '../utils/api';
 import { formatDate, getErrorMessage, generateMetaTitle, generateMetaDescription } from '../utils/helpers';
 
 const BlogPost: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<Post | null>(null);
+  const [author, setAuthor] = useState<Author | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
@@ -36,6 +38,17 @@ const BlogPost: React.FC = () => {
       // Fetch the post by slug
       const postData = await blogAPI.getPostBySlug(slug);
       setPost(postData);
+
+      // Fetch author information if authorSlug exists
+      if (postData.authorSlug) {
+        try {
+          const authorData = await blogAPI.getAuthorBySlug(postData.authorSlug);
+          setAuthor(authorData);
+        } catch (err) {
+          console.warn('Failed to fetch author data:', err);
+          // Don't break the page if author fetch fails
+        }
+      }
 
       // Fetch related posts (same tags, excluding current post)
       if (postData.tags && postData.tags.length > 0) {
@@ -235,7 +248,16 @@ const BlogPost: React.FC = () => {
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              <span>By {post.author}</span>
+              <span>By {post.authorSlug ? (
+                <Link 
+                  to={`/authors/${post.authorSlug}`}
+                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+                >
+                  {post.author}
+                </Link>
+              ) : (
+                post.author
+              )}</span>
             </div>
             
             <div className="flex items-center">
@@ -363,6 +385,24 @@ const BlogPost: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Author Information */}
+        {author && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-12 mb-12">
+            <div className="flex items-center mb-6">
+              <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">About the Author</h3>
+            </div>
+            <AuthorCard 
+              author={author} 
+              size="large" 
+              showBio={true}
+              showSocial={true}
+            />
+          </div>
+        )}
 
         {/* Related Posts */}
         {relatedPosts.length > 0 && (

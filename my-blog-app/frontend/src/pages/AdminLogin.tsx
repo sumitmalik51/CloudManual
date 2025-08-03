@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { blogAPI } from '../utils/api';
+import { blogAPI, authAPI } from '../utils/api';
 import { getErrorMessage } from '../utils/helpers';
 
 const AdminLogin: React.FC = () => {
@@ -8,13 +8,32 @@ const AdminLogin: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [setupRequired, setSetupRequired] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   const navigate = useNavigate();
 
-  // Check if already authenticated
+  // Check authentication status and setup requirements
   useEffect(() => {
-    if (blogAPI.isAuthenticated()) {
-      navigate('/admin');
-    }
+    const checkAuthStatus = async () => {
+      try {
+        if (blogAPI.isAuthenticated()) {
+          navigate('/admin');
+          return;
+        }
+
+        // Check if setup is required
+        const status = await authAPI.checkSetupStatus();
+        setSetupRequired(status.setupRequired);
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+        // If we can't check status, assume normal login
+        setSetupRequired(false);
+      } finally {
+        setCheckingStatus(false);
+      }
+    };
+
+    checkAuthStatus();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,12 +57,41 @@ const AdminLogin: React.FC = () => {
       
       // Redirect to admin dashboard
       navigate('/admin');
-    } catch (err) {
-      setError(getErrorMessage(err));
+    } catch (err: any) {
+      // Handle specific error codes
+      if (err.response?.data?.code === 'SETUP_REQUIRED') {
+        setSetupRequired(true);
+        setError('First-time setup required. Please set up your admin password.');
+      } else if (err.response?.data?.code === 'RATE_LIMITED') {
+        setError('Too many login attempts. Please try again in 15 minutes.');
+      } else if (err.response?.data?.code === 'VALIDATION_ERROR') {
+        const validationErrors = err.response.data.errors?.map((e: any) => e.msg).join(', ');
+        setError(validationErrors || 'Validation failed');
+      } else {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // If we're still checking status, show loading
+  if (checkingStatus) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Checking authentication status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If setup is required, redirect to setup page
+  if (setupRequired) {
+    navigate('/admin/setup');
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -159,16 +207,16 @@ const AdminLogin: React.FC = () => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Need help?</span>
+                <span className="px-2 bg-white text-gray-500">Security Information</span>
               </div>
             </div>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Default password: <code className="bg-gray-100 px-2 py-1 rounded text-xs">admin123</code>
+                Enhanced security with JWT tokens and encrypted passwords
               </p>
               <p className="mt-2 text-xs text-gray-500">
-                Remember to change this in production!
+                Your credentials are securely encrypted and protected
               </p>
             </div>
           </div>

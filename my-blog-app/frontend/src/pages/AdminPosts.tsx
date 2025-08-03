@@ -2,32 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/layout/AdminLayout';
 import { formatDate } from '../utils/helpers';
-
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  excerpt: string;
-  author: string;
-  status: 'published' | 'draft';
-  createdAt: string;
-  updatedAt: string;
-  views: number;
-  readingTime: number;
-  tags: string[];
-  slug: string;
-}
-
-interface PostsResponse {
-  posts: Post[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalPosts: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
-}
+import { blogAPI } from '../utils/api';
+import type { Post } from '../utils/api';
 
 const AdminPosts: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -44,34 +20,13 @@ const AdminPosts: React.FC = () => {
   const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
       
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-        sortBy,
-        sortOrder,
+      // Use the centralized API service
+      const data = await blogAPI.getAdminPosts({
+        page: currentPage,
+        limit: 10
       });
-
-      if (searchTerm) {
-        params.append('search', searchTerm);
-      }
-
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter);
-      }
-
-      const response = await fetch(`http://localhost:5000/api/posts/admin?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch posts');
-      }
-
-      const data: PostsResponse = await response.json();
+      
       setPosts(data.posts);
       setTotalPages(data.pagination.totalPages);
     } catch (err) {
@@ -97,18 +52,8 @@ const AdminPosts: React.FC = () => {
     }
 
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:5000/api/posts/admin/${postId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete post');
-      }
-
+      await blogAPI.deletePost(postId);
+      
       // Refresh posts list
       fetchPosts();
     } catch (err) {

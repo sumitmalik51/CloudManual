@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/layout/AdminLayout';
+import { blogAPI } from '../utils/api';
 
 interface RecentPost {
   id: string;
@@ -29,20 +30,13 @@ const AdminDashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
       
-      // Fetch recent posts
-      const postsResponse = await fetch('http://localhost:5000/api/posts/admin?limit=10&sortBy=createdAt&sortOrder=desc', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      // Use the centralized API service instead of direct fetch
+      const postsData = await blogAPI.getAdminPosts({
+        limit: 10,
+        page: 1
       });
-
-      if (!postsResponse.ok) {
-        throw new Error('Failed to fetch recent posts');
-      }
-
-      const postsData = await postsResponse.json();
+      
       setRecentPosts(postsData.posts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -53,19 +47,8 @@ const AdminDashboard: React.FC = () => {
 
   const handleDelete = async (postId: string) => {
     try {
-      const token = localStorage.getItem('adminToken');
+      await blogAPI.deletePost(postId);
       
-      const response = await fetch(`http://localhost:5000/api/posts/admin/${postId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete post');
-      }
-
       // Refresh the dashboard data after successful deletion
       await fetchDashboardData();
     } catch (err) {

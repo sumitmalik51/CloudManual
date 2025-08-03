@@ -1,5 +1,7 @@
-import React, { useRef } from 'react';
-import { Editor } from '@tinymce/tinymce-react';
+import React from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import './RichTextEditor.css';
 
 interface RichTextEditorProps {
   value: string;
@@ -14,87 +16,189 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   placeholder = 'Start writing your content...',
   height = 400
 }) => {
-  const editorRef = useRef<any>(null);
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: value,
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      onChange(html);
+    },
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none',
+      },
+    },
+  });
 
-  const handleEditorChange = (content: string) => {
-    onChange(content);
-  };
+  // Update editor content when value prop changes
+  React.useEffect(() => {
+    if (editor && value !== editor.getHTML()) {
+      editor.commands.setContent(value);
+    }
+  }, [editor, value]);
+
+  if (!editor) {
+    return (
+      <div 
+        className="w-full border border-gray-300 rounded-lg p-4 bg-gray-50"
+        style={{ height: `${height}px` }}
+      >
+        <div className="flex items-center justify-center h-full">
+          <div className="text-gray-500">Loading editor...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="rich-text-editor">
-      <Editor
-        apiKey="your-tinymce-api-key" // You'll need to get a free API key from TinyMCE
-        onInit={(_evt, editor) => editorRef.current = editor}
-        value={value}
-        onEditorChange={handleEditorChange}
-        init={{
-          height: height,
-          menubar: false,
-          plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'help', 'wordcount', 'codesample'
-          ],
-          toolbar: 'undo redo | blocks | ' +
-            'bold italic forecolor | alignleft aligncenter ' +
-            'alignright alignjustify | bullist numlist outdent indent | ' +
-            'removeformat | code codesample | link image | help',
-          content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px }',
-          placeholder: placeholder,
-          skin: 'oxide',
-          content_css: 'default',
-          branding: false,
-          promotion: false,
-          resize: true,
-          image_title: true,
-          automatic_uploads: true,
-          file_picker_types: 'image',
-          codesample_languages: [
-            { text: 'HTML/XML', value: 'markup' },
-            { text: 'JavaScript', value: 'javascript' },
-            { text: 'TypeScript', value: 'typescript' },
-            { text: 'CSS', value: 'css' },
-            { text: 'Python', value: 'python' },
-            { text: 'Java', value: 'java' },
-            { text: 'C#', value: 'csharp' },
-            { text: 'PHP', value: 'php' },
-            { text: 'Ruby', value: 'ruby' },
-            { text: 'Go', value: 'go' },
-            { text: 'Rust', value: 'rust' },
-            { text: 'SQL', value: 'sql' },
-            { text: 'Bash', value: 'bash' },
-            { text: 'PowerShell', value: 'powershell' },
-            { text: 'YAML', value: 'yaml' },
-            { text: 'JSON', value: 'json' }
-          ],
-          // Custom file picker for images
-          file_picker_callback: (callback: any, _value: any, meta: any) => {
-            if (meta.filetype === 'image') {
-              const input = document.createElement('input');
-              input.setAttribute('type', 'file');
-              input.setAttribute('accept', 'image/*');
-              
-              input.addEventListener('change', (e: any) => {
-                const file = e.target.files[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.addEventListener('load', () => {
-                    const id = 'blobid' + (new Date()).getTime();
-                    const blobCache = editorRef.current.editorUpload.blobCache;
-                    const base64 = (reader.result as string).split(',')[1];
-                    const blobInfo = blobCache.create(id, file, base64);
-                    blobCache.add(blobInfo);
-                    callback(blobInfo.blobUri(), { title: file.name });
-                  });
-                  reader.readAsDataURL(file);
-                }
-              });
-              
-              input.click();
-            }
-          }
-        }}
-      />
+    <div className="tiptap-editor border border-gray-300 rounded-lg overflow-hidden">
+      {/* Toolbar */}
+      <div className="border-b border-gray-300 bg-gray-50 p-2 flex flex-wrap gap-1">
+        <button
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('bold')
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          Bold
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('italic')
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          Italic
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('strike')
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          Strike
+        </button>
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('heading', { level: 1 })
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          H1
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('heading', { level: 2 })
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          H2
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('heading', { level: 3 })
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          H3
+        </button>
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+        <button
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('bulletList')
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          • List
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('orderedList')
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          1. List
+        </button>
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+        <button
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('blockquote')
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          Quote
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            editor.isActive('codeBlock')
+              ? 'bg-blue-500 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+          type="button"
+        >
+          Code
+        </button>
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+        <button
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          className="px-3 py-1 rounded text-sm font-medium bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          type="button"
+        >
+          Undo
+        </button>
+        <button
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          className="px-3 py-1 rounded text-sm font-medium bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          type="button"
+        >
+          Redo
+        </button>
+      </div>
+
+      {/* Editor Content */}
+      <div className="relative">
+        <EditorContent 
+          editor={editor} 
+          className="tiptap-content"
+          style={{ minHeight: `${height}px` }}
+        />
+        {!value && (
+          <div className="absolute top-4 left-4 text-gray-400 pointer-events-none">
+            {placeholder}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

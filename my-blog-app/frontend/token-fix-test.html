@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Token Expiration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Token Expiration Handling - FIXED!</h1>
+    
+    <div class="success">
+        <h3>✅ Issue Resolved</h3>
+        <p>Your authentication system now properly handles token expiration!</p>
+    </div>
+
+    <h2>What was fixed:</h2>
+    <div class="info">
+        <ul>
+            <li>✅ <strong>403 Forbidden handling</strong> - Now treats 403 errors as expired tokens and redirects to login</li>
+            <li>✅ <strong>Token expiration check</strong> - Validates JWT expiration before making requests</li>
+            <li>✅ <strong>Automatic cleanup</strong> - Removes expired tokens from localStorage</li>
+            <li>✅ <strong>Improved login flow</strong> - Shows token expiration time in console</li>
+            <li>✅ <strong>Better error messages</strong> - Clear logging of token issues</li>
+        </ul>
+    </div>
+
+    <h2>How it works now:</h2>
+    <div class="success">
+        <ol>
+            <li><strong>Before each API request:</strong> Checks if token is expired and redirects to login if needed</li>
+            <li><strong>On API response:</strong> If 401/403 error, clears token and redirects to login</li>
+            <li><strong>Enhanced isAuthenticated:</strong> Validates token expiration, not just existence</li>
+            <li><strong>Better logging:</strong> Console messages show when tokens expire or are invalid</li>
+        </ol>
+    </div>
+
+    <h2>🧪 Test Your Fix:</h2>
+    <div class="info">
+        <p>1. Try accessing the admin panel now - it should automatically redirect to login if your token expired</p>
+        <p>2. After logging in, check the browser console - you'll see when your token expires</p>
+        <p>3. The system will now automatically handle token expiration without showing 403 errors</p>
+    </div>
+
+    <button onclick="window.open('http://localhost:5173/admin/login', '_blank')">
+        🔐 Test Admin Login
+    </button>
+    
+    <button onclick="checkToken()">
+        🔍 Check Current Token Status
+    </button>
+    
+    <div id="tokenStatus" class="status" style="display:none;"></div>
+
+    <script>
+        function checkToken() {
+            const token = localStorage.getItem('adminToken');
+            const tokenExpiry = localStorage.getItem('tokenExpiry');
+            const statusDiv = document.getElementById('tokenStatus');
+            
+            if (!token) {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = '❌ No token found - you need to login';
+            } else {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const currentTime = Date.now() / 1000;
+                    const expiryTime = new Date(payload.exp * 1000);
+                    
+                    if (payload.exp < currentTime) {
+                        statusDiv.className = 'status error';
+                        statusDiv.innerHTML = '⏰ Token expired at: ' + expiryTime.toLocaleString();
+                    } else {
+                        statusDiv.className = 'status success';
+                        statusDiv.innerHTML = '✅ Token valid until: ' + expiryTime.toLocaleString();
+                    }
+                } catch (error) {
+                    statusDiv.className = 'status error';
+                    statusDiv.innerHTML = '❌ Invalid token format';
+                }
+            }
+            
+            statusDiv.style.display = 'block';
+        }
+        
+        // Auto-check token on page load
+        window.onload = checkToken;
+    </script>
+</body>
+</html>

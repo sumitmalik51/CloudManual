@@ -17,7 +17,32 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('adminToken');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Check if token is expired before making the request
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const currentTime = Date.now() / 1000;
+        
+        if (payload.exp && payload.exp < currentTime) {
+          // Token is expired, remove it and redirect to login
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('isAdmin');
+          localStorage.removeItem('tokenExpiry');
+          console.log('🔒 Token expired before request, redirecting to login');
+          
+          if (window.location.pathname !== '/admin/login') {
+            window.location.href = '/admin/login';
+          }
+          return Promise.reject(new Error('Token expired'));
+        }
+        
+        config.headers.Authorization = `Bearer ${token}`;
+      } catch (error) {
+        // Invalid token format, remove it
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('isAdmin');
+        localStorage.removeItem('tokenExpiry');
+        console.log('🔒 Invalid token format, removed from storage');
+      }
     }
     return config;
   },
@@ -30,13 +55,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Clear auth token if unauthorized
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Clear auth token if unauthorized or forbidden (likely expired token)
       localStorage.removeItem('adminToken');
       localStorage.removeItem('isAdmin');
+      localStorage.removeItem('tokenExpiry');
       
       // Redirect to login if we're not already there
       if (window.location.pathname !== '/admin/login') {
+        console.log('🔒 Token expired or invalid. Redirecting to login...');
         window.location.href = '/admin/login';
       }
     }
@@ -216,8 +243,21 @@ export const blogAPI = {
   login: async (username: string, password: string): Promise<{ message: string; token: string; user: { username: string } }> => {
     const response = await api.post('/posts/admin/login', { username, password });
     if (response.data.token) {
-      localStorage.setItem('adminToken', response.data.token);
+      const token = response.data.token;
+      localStorage.setItem('adminToken', token);
       localStorage.setItem('isAdmin', 'true');
+      
+      // Store token expiration time for reference
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp) {
+          localStorage.setItem('tokenExpiry', payload.exp.toString());
+          const expiryDate = new Date(payload.exp * 1000);
+          console.log('🔑 Login successful. Token expires at:', expiryDate.toLocaleString());
+        }
+      } catch (error) {
+        console.warn('Could not parse token expiration:', error);
+      }
     }
     return response.data;
   },
@@ -225,10 +265,39 @@ export const blogAPI = {
   logout: () => {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('isAdmin');
+    localStorage.removeItem('tokenExpiry');
+    console.log('🔓 Logged out successfully');
   },
 
   isAuthenticated: (): boolean => {
-    return localStorage.getItem('adminToken') !== null;
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      return false;
+    }
+    
+    // Check if token is expired
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Date.now() / 1000;
+      
+      if (payload.exp && payload.exp < currentTime) {
+        // Token is expired, remove it
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('isAdmin');
+        localStorage.removeItem('tokenExpiry');
+        console.log('🔒 Token expired, removed from storage');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      // Invalid token format, remove it
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('isAdmin');
+      localStorage.removeItem('tokenExpiry');
+      console.log('🔒 Invalid token format, removed from storage');
+      return false;
+    }
   },
 
   getAdminPosts: async (params: {

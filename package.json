@@ -1,6 +1,24 @@
 {
+  "name": "cloudmanual-security",
+  "version": "2.0.0",
+  "description": "CloudManual Blog with Enhanced Security",
+  "scripts": {
+    "setup": "node generate-secrets.js",
+    "test-auth": "node test-auth-flow.js",
+    "backend:install": "cd my-blog-app/backend && npm install",
+    "frontend:install": "cd my-blog-app/frontend && npm install --legacy-peer-deps",
+    "backend:start": "cd my-blog-app/backend && npm start",
+    "backend:dev": "cd my-blog-app/backend && npm run dev",
+    "backend:test": "cd my-blog-app/backend && npm test",
+    "frontend:start": "cd my-blog-app/frontend && npm run dev",
+    "frontend:build": "cd my-blog-app/frontend && npm run build",
+    "frontend:test": "cd my-blog-app/frontend && npm test",
+    "install-all": "npm run backend:install && npm run frontend:install",
+    "dev": "echo 'Starting backend in dev mode...' && npm run backend:dev"
+  },
   "dependencies": {
-    "react-helmet-async": "^2.0.5"
+    "react-helmet-async": "^2.0.5",
+    "axios": "^1.11.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.4",
@@ -8,5 +26,15 @@
     "@testing-library/user-event": "^14.6.1",
     "jsdom": "^26.1.0",
     "vitest": "^3.2.4"
-  }
+  },
+  "keywords": [
+    "blog",
+    "security",
+    "authentication",
+    "jwt",
+    "bcrypt",
+    "nodejs",
+    "react"
+  ],
+  "license": "MIT"
 }

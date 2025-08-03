@@ -2,14 +2,23 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 const cosmosDB = require('./services/cosmosDB');
+const authService = require('./services/auth');
+const { securityHeaders } = require('./middleware/auth');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false // We'll use our custom CSP
+}));
+app.use(securityHeaders);
+
+// Cookie parser (for httpOnly cookies)
+app.use(cookieParser());
 
 // Rate limiting
 const limiter = rateLimit({
@@ -26,7 +35,8 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:5174'
   ],
-  credentials: true
+  credentials: true, // Important for httpOnly cookies
+  optionsSuccessStatus: 200
 }));
 
 // Body parsing middleware
@@ -50,44 +60,19 @@ connectDB();
 // Routes
 app.use('/api/posts', require('./routes/posts-cosmos'));
 app.use('/api/authors', require('./routes/authors'));
-
-// Basic auth middleware (simple password-based for now)
-const basicAuth = (req, res, next) => {
-  const authToken = req.headers.authorization;
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-  
-  if (authToken === `Bearer ${adminPassword}`) {
-    next();
-  } else {
-    res.status(401).json({ message: 'Unauthorized access' });
-  }
-};
-
-// Admin auth endpoint
-app.post('/api/auth/login', (req, res) => {
-  const { password } = req.body;
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-  
-  if (password === adminPassword) {
-    res.json({ 
-      success: true, 
-      token: adminPassword,
-      message: 'Login successful' 
-    });
-  } else {
-    res.status(401).json({ 
-      success: false, 
-      message: 'Invalid password' 
-    });
-  }
-});
+app.use('/api/auth', require('./routes/auth')); // New dedicated auth routes
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    version: '2.0.0',
+    security: {
+      authServiceLoaded: !!authService,
+      jwtConfigured: !!process.env.JWT_SECRET
+    }
   });
 });
 

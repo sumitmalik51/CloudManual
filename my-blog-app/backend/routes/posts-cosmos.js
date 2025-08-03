@@ -1,25 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const cosmosDB = require('../services/cosmosDB');
-const jwt = require('jsonwebtoken');
-
-// JWT middleware for protected routes
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (token == null) {
-    return res.status(401).json({ message: 'Access token required' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
-};
+const { authenticateToken } = require('../middleware/auth');
 
 // Helper function to generate slug
 const generateSlug = (title) => {
@@ -428,36 +410,6 @@ router.delete('/admin/:id', authenticateToken, async (req, res) => {
     }
     res.status(500).json({ 
       message: 'Error deleting post',
-      error: error.message 
-    });
-  }
-});
-
-// POST /api/posts/admin/login - Admin login
-router.post('/admin/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    
-    // Simple authentication (in production, use proper user management)
-    if (username === 'admin' && password === process.env.ADMIN_PASSWORD) {
-      const token = jwt.sign(
-        { username: 'admin' },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      
-      res.json({
-        message: 'Login successful',
-        token,
-        user: { username: 'admin' }
-      });
-    } else {
-      res.status(401).json({ message: 'Invalid credentials' });
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ 
-      message: 'Login error',
       error: error.message 
     });
   }

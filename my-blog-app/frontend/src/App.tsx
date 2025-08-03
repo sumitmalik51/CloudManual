@@ -7,6 +7,7 @@ import AuthorPage from './pages/AuthorPage';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import AdminLogin from './pages/AdminLogin';
+import AdminSetup from './pages/AdminSetup';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminPosts from './pages/AdminPosts';
 import PostEditor from './pages/PostEditor';
@@ -26,6 +27,7 @@ function AnimatedRoutes() {
         <Route path="/authors/:slug" element={<AuthorPage />} />
         {/* Admin routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/setup" element={<AdminSetup />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/posts" element={<AdminPosts />} />
